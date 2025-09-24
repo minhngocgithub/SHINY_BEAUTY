@@ -12,7 +12,7 @@ const register = async(req, res) => {
     try {
         // Kiểm tra tất cả các trường dữ liệu
         if(!name || !email || !password || !otp){
-            return res.status(400).json('Please fill in fields') // Thêm return để thoát hàm
+            return res.status(400).json('Please fill in fields')
         }
         
         // Kiểm tra OTP trước khi kiểm tra email tồn tại
@@ -322,15 +322,12 @@ const updateMyInfo = async(req, res) => {
 
 const uploadAvatar = async (req, res) => {
   try {
-    // Kiểm tra file upload
     if (!req.file) {
       return res.status(400).json({
         success: false,
         message: "Please upload an image",
       })
     }
-    
-    // Kiểm tra nếu user là OAuth user và đang cố gắng thay đổi avatar
     if (req.user.isOAuthUser) {
       return res.status(400).json({
         success: false,

@@ -210,7 +210,7 @@ const updateFeaturedOrder = async (req, res) => {
 
         const updatePromises = products.map(item => {
             if (!item.id || typeof item.order !== 'number') {
-                throw new Error('Each product must have id and order');
+                console.log('Each product must have id and order');
             }
             return Product.findByIdAndUpdate(
                 item.id,

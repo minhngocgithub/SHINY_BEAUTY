@@ -17,6 +17,10 @@ import UpdateProduct from '../components/admin/UpdateProduct.vue'
 import Setting from '../components/profile/Setting.vue';
 import ForgotPassword from '../views/auth/ForgotPassword.vue'
 import ResetPassword from '../views/auth/ResetPassword.vue'
+// Product
+import SaleView from '../views/product-page/SaleView.vue'
+import FeaturedView from '../views/product-page/FeaturedView.vue'
+import productDetail from '../views/ProductDetail.vue'
 const routes = [
     {   
         path: '/HomeView', 
@@ -62,6 +66,22 @@ const routes = [
         component: ShopProfile,
     },
     {
+        path: '/products',
+        children: [
+            {
+                path: 'sales',
+                name: 'SaleView',
+                component: SaleView
+            },
+            {
+                path: ':id',
+                name: 'ProductDetail',
+                component: productDetail,
+            },
+            
+        ]
+    },
+    {
         path: '/Setting',
         name: 'Setting',
         component: Setting,
@@ -86,6 +106,7 @@ const routes = [
         name: 'OAuthError',
         component: OAuthCallback,
     },
+    
     {
         path: '/:pathMatch(.*)*',
         name: 'NotFound404',

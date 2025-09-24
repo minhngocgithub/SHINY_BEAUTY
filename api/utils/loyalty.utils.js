@@ -148,17 +148,11 @@ class LoyaltyService {
         
         return strategy;
     }
-    
-    /**
-     * Get user loyalty dashboard data
-     * @param {string} userId - User ID
-     * @returns {Object} Dashboard data
-     */
     static async getLoyaltyDashboard(userId) {
         try {
             const user = await User.findById(userId);
             if (!user) {
-                throw new Error('User not found');
+                console.log('User not found');
             }
             
             const benefits = this.getTierBenefits(user.loyaltyProfile.tier);
@@ -179,7 +173,7 @@ class LoyaltyService {
                 lastPurchase: user.loyaltyProfile.lastPurchaseDate
             };
         } catch (error) {
-            throw new Error(`Error getting loyalty dashboard: ${error.message}`);
+            console.log(`Error getting loyalty dashboard: ${error.message}`);
         }
     }
     

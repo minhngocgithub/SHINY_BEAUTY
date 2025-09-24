@@ -2,11 +2,12 @@
   <div class="w-full h-fit bg-[#f9f9f9] rounded-md px-4">
     <!-- title flash sale -->
     <div class="flex justify-between w-full p-12">
-      <div class="flex">
+      <div class="flex items-center justify-center gap-2 text-sm font-medium tracking-wider uppercase text-stone-500">
         <h2 class="text-xl font-bold">Chosen for you</h2>
+        <span class="w-12 h-px bg-stone-500"></span>
       </div>
-      <div class="text-[#5a4098]">
-        See more
+      <div class="text-[#5a4098] hover:underline hover:text-rose-600">
+        <router-link to="/products/sales">See more</router-link>
       </div>
     </div>
     <!-- end title header -->
@@ -73,7 +74,7 @@ import { getNewProductApi, getBestSellerApi } from "../service/product.service";
 import CartProduct from "./product/CardProduct.vue";
 import { Swiper, SwiperSlide } from "swiper/vue";
 import "swiper/css";
-import Loading from "../components/Loading.vue";
+import Loading from "./Loading.vue";
 const mySwiper = ref(null);
 const products = ref([]);
 const error = ref(null);
@@ -87,7 +88,7 @@ const fetchChosenProducts = async () => {
   try {
     loading.value = true;
     error.value = null;
-    const res = await getNewProductApi();
+    const res = await getBestSellerApi();
     
     if (res && res.data && res.data.data && Array.isArray(res.data.data)) {
       products.value = res.data.data.map((p) => ({

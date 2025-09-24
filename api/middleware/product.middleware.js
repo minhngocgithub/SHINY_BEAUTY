@@ -162,15 +162,15 @@ const instanceMethods = {
     const { salePrice, discountPercentage, startDate, endDate, saleType = 'percentage' } = saleData;
     
     if (!salePrice && !discountPercentage) {
-      throw new Error('Either salePrice or discountPercentage is required');
+      console.log('Either salePrice or discountPercentage is required');
     }
     
     if (discountPercentage && (discountPercentage < 0 || discountPercentage > 100)) {
-      throw new Error('Discount percentage must be between 0 and 100');
+      console.log('Discount percentage must be between 0 and 100');
     }
     
     if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
-      throw new Error('Sale start date must be before end date');
+      console.log('Sale start date must be before end date');
     }
     
     if (!this.originalPrice) {
@@ -182,7 +182,7 @@ const instanceMethods = {
       this.discountPercentage = discountPercentage;
     } else if (salePrice) {
       if (salePrice >= this.originalPrice) {
-        throw new Error('Sale price must be less than original price');
+        console.log('Sale price must be less than original price');
       }
       this.salePrice = salePrice;
       this.discountPercentage = Math.round(
@@ -224,19 +224,19 @@ const instanceMethods = {
     } = flashSaleData;
     
     if (!discountPercentage || saleStock === undefined || saleStock === null) {
-      throw new Error('Discount percentage and sale stock are required for flash sale');
+      console.log('Discount percentage and sale stock are required for flash sale');
     }
     
     if (saleStock > this.countInstock) {
-      throw new Error('Sale stock cannot exceed available stock');
+      console.log('Sale stock cannot exceed available stock');
     }
     
     if (saleStock < 0) {
-      throw new Error('Sale stock cannot be negative');
+      console.log('Sale stock cannot be negative');
     }
     
     if (maxQuantityPerUser <= 0) {
-      throw new Error('Max quantity per user must be positive');
+      console.log('Max quantity per user must be positive');
     }
     
     this.setSale({
@@ -258,16 +258,16 @@ const instanceMethods = {
 
   updateStock: function(quantitySold) {
     if (!Number.isInteger(quantitySold) || quantitySold <= 0) {
-      throw new Error('Quantity sold must be a positive integer');
+      console.log('Quantity sold must be a positive integer');
     }
     
     if (quantitySold > this.countInstock) {
-      throw new Error('Cannot sell more than available stock');
+      console.log('Cannot sell more than available stock');
     }
     
     if (this.flashSale && this.flashSale.isFlashSale) {
       if (quantitySold > this.flashSale.saleStock) {
-        throw new Error('Cannot sell more than flash sale stock available');
+        console.log('Cannot sell more than flash sale stock available');
       }
     }
     

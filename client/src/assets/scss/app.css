@@ -1,75 +1,58 @@
-
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-
-.form-control {
+@layer components {
+  .form-control {
     @apply w-full border my-2 py-2 px-3 rounded-2xl;
-}
-button {
-    @apply bg-gray-300
-}
-button.primary {
+  }
+  
+  button {
+    @apply bg-gray-300;
+  }
+  
+  button.primary {
     @apply p-2 w-full text-white rounded-2xl;
-}
-.back-button {
-@apply w-full py-2 text-sm text-gray-500 hover:text-gray-700 text-center transition duration-300;
+  }
+  
+  .back-button {
+    @apply w-full py-2 text-sm text-gray-500 hover:text-gray-700 text-center transition duration-300;
+  }
+  
+  .error-feedback {
+    @apply text-red-500 text-sm mt-1;
+  }
+  
+  .alert-danger {
+    @apply bg-red-100 text-red-700;
+  }
+  
+  .success-icon {
+    @apply w-16 h-16 flex items-center justify-center bg-green-500 text-white text-2xl rounded-full;
+  }
 }
 
-.error-feedback {
-@apply text-red-500 text-sm mt-1;
-}
-
-.alert-danger {
-@apply bg-red-100 text-red-700;
-}
-
-.success-icon {
-@apply w-16 h-16 flex items-center justify-center bg-green-500 text-white text-2xl rounded-full;
-}
+/* Custom CSS không dùng @apply */
 .container {
-    position: relative;
-    width: 500px;
-    padding: 40px;
-    background: rgba(255, 255, 255, 0.678);
-    backdrop-filter: blur(3px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 15px 25px rgba(0, 0, 0, 0.6);
-    border-radius: 30px;
-    text-align: center;
-    overflow: hidden;
+  position: relative;
+  width: 500px;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.678);
+  backdrop-filter: blur(3px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 15px 25px rgba(0, 0, 0, 0.6);
+  border-radius: 30px;
+  text-align: center;
+  overflow: hidden;
 }
+
 .container::before {
-    content: "";
-    position: absolute;
-    top: -50%;
-    width: 100%;
-    height: 100%;
-    transform: skewX(345deg);
-    z-index: -1;
-    background: rgba(255, 255, 255, 0.2);
-}
-.primary {
-    position: relative;
-    display: inline-block;
-    padding: 10px 30px;
-    letter-spacing: 2px;
-    background-color: #ff00ff80;
-    background-image: linear-gradient(160deg, #ff00ff80 0%, #00ddff80 100%);
-    border-radius: 50px;
-}
-.loading-component {
-    position: fixed;
-    top: 40%; /* Position it in the middle vertically */
-    left: 50%; /* Position it in the middle horizontally */
-    display: flex; /* Center the loading component */
-    align-items: center;
-    justify-content: center;
-    z-index: 100; /* Make sure it's above other content */
-    background-color: rgba(255, 255, 255, 0.8); /* Optional: Semi-transparent background */
-}
-input:focus {
-  outline: none;
+  content: "";
+  position: absolute;
+  top: -50%;
+  width: 100%;
+  height: 100%;
+  transform: skewX(345deg);
+  z-index: -1;
+  background: rgba(255, 255, 255, 0.2);
 }

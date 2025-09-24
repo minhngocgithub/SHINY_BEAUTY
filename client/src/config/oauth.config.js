@@ -31,7 +31,7 @@ export const buildOAuthUrl = (provider) => {
     case 'twitter':
       return `${baseUrl}${OAUTH_CONFIG.TWITTER_OAUTH_URL}`;
     default:
-      throw new Error(`Unsupported OAuth provider: ${provider}`);
+      console.log(`Unsupported OAuth provider: ${provider}`);
   }
 };
 
@@ -45,5 +45,5 @@ export const getCallbackUrl = (type = 'success') => {
     return `${baseUrl}${OAUTH_CONFIG.ERROR_CALLBACK_URL}`;
   }
   
-  throw new Error(`Invalid callback type: ${type}`);
+  console.log(`Invalid callback type: ${type}`);
 }; 

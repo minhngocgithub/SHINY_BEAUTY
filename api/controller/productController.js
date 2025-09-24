@@ -3,116 +3,125 @@ const { uploadImageCloudinary, deleteImageFromCloudinary } = require('../utils/u
 const slugify = require('slugify')
 const cloudinary = require('../config/cloudinary')
 
-const createProduct = async(req, res) => {
+const createProduct = async (req, res) => {
   try {
-      // Destructuring dữ liệu từ request
-      const { 
-          name, 
-          brand, 
-          category, 
-          description, 
-          price, 
-          countInstock 
-      } = req.body;
+    const {
+      name,
+      brand,
+      category,
+      description,
+      price,
+      countInstock
+    } = req.body;
+    const validationErrors = [];
 
-      // Validation chi tiết
-      const validationErrors = [];
-      
-      if (!name) validationErrors.push("Name is required");
-      if (!brand) validationErrors.push("Brand is required");
-      if (!description) validationErrors.push("Description is required");
-      if (!price) validationErrors.push("Price is required");
-      if (!category) validationErrors.push("Category is required");
-      if (!countInstock) validationErrors.push("CountInstock is required");
-
-      // Nếu có lỗi validation, trả về ngay
-      if (validationErrors.length > 0) {
-          return res.status(400).json({ 
-              errors: validationErrors 
-          });
-      }
-
-      // Xử lý upload ảnh
-      let cloudinaryRes = null;
-      
-      // Kiểm tra xem có file upload hay base64 image
-      if (req.file) {
-          // Nếu là file upload từ form
-          cloudinaryRes = await uploadImageCloudinary(req.file);
-      } else if (req.body.image) {
-          // Nếu là base64 image
-          cloudinaryRes = await cloudinary.uploader.upload(req.body.image, { 
-              folder: "products",
-              transformation: [
-                  { width: 800, height: 600, crop: "limit" }
-              ]
-          });
-      } else {
-          return res.status(400).json({ 
-              error: "Image is required" 
-          });
-      }
-
-      // Tạo slug từ tên sản phẩm
-      const slug = slugify(name, { 
-          lower: true,     // Chuyển thành chữ thường
-          strict: true,    // Loại bỏ các ký tự đặc biệt
-          trim: true       // Loại bỏ khoảng trắng
+    if (!name) validationErrors.push("Name is required");
+    if (!brand) validationErrors.push("Brand is required");
+    if (!description) validationErrors.push("Description is required");
+    if (!price) validationErrors.push("Price is required");
+    if (!category) validationErrors.push("Category is required");
+    if (!countInstock) validationErrors.push("CountInstock is required");
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        errors: validationErrors
       });
+    }
+    let cloudinaryRes = null;
 
-      // Tạo đối tượng sản phẩm
-      const productData = {
-          name,
-          brand,
-          category,
-          description,
-          price,
-          countInstock,
-          slug,
-          image: {
-              public_id: cloudinaryRes.public_id,
-              url: cloudinaryRes.secure_url
-          }
-      };
+    if (req.file) {
+      cloudinaryRes = await uploadImageCloudinary(req.file);
+    }
+    // Handle image array case
+    else if (req.body.image && Array.isArray(req.body.image) && req.body.image.length > 0) {
+      const imageData = req.body.image[0]; // Get first image from array
+      if (imageData.url && imageData.public_id) {
+        cloudinaryRes = {
+          public_id: imageData.public_id,
+          secure_url: imageData.url
+        };
+      }
+    }
+    // Handle image object case
+    else if (req.body.image && typeof req.body.image === 'object' && !Array.isArray(req.body.image)) {
+      if (req.body.image.url && req.body.image.public_id) {
+        cloudinaryRes = {
+          public_id: req.body.image.public_id,
+          secure_url: req.body.image.url
+        };
+      }
+    }
 
-      // Lưu sản phẩm mới
-      const product = new Product(productData);
-      await product.save();
-    
-      // Trả về response
-      res.status(201).json({
-          success: true,
-          message: 'Product created successfully',
-          product: product
+    else if (req.body.image && typeof req.body.image === 'string' && (req.body.image.startsWith("http://") || req.body.image.startsWith("https://"))) {
+      cloudinaryRes = { secure_url: req.body.image, public_id: null };
+    }
+    else if (req.body.image && typeof req.body.image === 'string') {
+      cloudinaryRes = await cloudinary.uploader.upload(req.body.image, {
+        folder: "products",
+        transformation: [{ width: 800, height: 600, crop: "limit" }]
       });
+    } else {
+      return res.status(400).json({
+        error: "Image is required"
+      });
+    }
+
+    const slug = slugify(name, {
+      lower: true,
+      strict: true,
+      trim: true
+    });
+
+    const productData = {
+      name,
+      brand,
+      category,
+      description,
+      price,
+      countInstock,
+      slug,
+      image: {
+        public_id: cloudinaryRes.public_id,
+        url: cloudinaryRes.secure_url
+      }
+    };
+
+    const product = new Product(productData);
+    await product.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Product created successfully',
+      product: product
+    });
 
   } catch (error) {
-      console.error('Create Product Error:', error);
-      res.status(500).json({
-          success: false,
-          message: 'Error creating product',
-          error: error.message
-      });
+    console.error('Create Product Error:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Error creating product',
+      error: error.message
+    })
   }
 }
+const getProduct = async (req, res) => {
+  try {
+    const { id } = req.params
 
+    const product = await Product.findById(id)
+    return res.status(200).json({
+      success: product ? true : false,
+      productData: product ? product : 'Cannot get product'
+    })
+  } catch (error) {
+    return res.status(404).json({ message: 'Not found any product', error })
+  }
 
-const getProduct = async(req, res) => {
-  const { id } = req.params
-  
-  const product = await Product.findById(id)
-  return res.status(200).json({
-    success: product ? true : false,
-    productData: product ? product : 'Cannot get product'
-  })
-  
 }
-
-const getNewProduct = async(req, res) => {
+const getNewProduct = async (req, res) => {
   try {
     const limit = req.query.limit * 1 || 10
     const products = await Product.find({ isNewProduct: true }).limit(limit).sort("-createAt")
-    
+
     return res.status(200).json({
       status: "success",
       totals: products.length,
@@ -125,11 +134,11 @@ const getNewProduct = async(req, res) => {
     })
   }
 }
-const getBestSeller = async(req, res) => {
+const getBestSeller = async (req, res) => {
   try {
     const limit = req.query.limit * 1 || 10
-    const products = await Product.find({ bestSeller: true }).limit(limit).sort('-sold')
-    if(products) {
+    const products = await Product.find({ isBestSeller: true }).limit(limit).sort('-sold')
+    if (products) {
       return res.status(200).json({
         status: "success",
         totals: products.length,
@@ -145,17 +154,15 @@ const getBestSeller = async(req, res) => {
     })
   }
 }
-
-const getAllProducts = async(req, res) => {
+const getAllProducts = async (req, res) => {
   try {
     const products = await Product.find({})
-    return res.status(200).json({products})
+    return res.status(200).json({ products })
   } catch (error) {
     return res.status(404).json({ message: 'Not found any product!', error })
   }
 
 }
-
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params
@@ -167,7 +174,8 @@ const updateProduct = async (req, res) => {
       price,
       countInstock,
       image,
-      featured
+      featured,
+      isBestSeller,
       // totalRating,
       // sold
     } = req.body
@@ -223,6 +231,7 @@ const updateProduct = async (req, res) => {
       price: price || existingProduct.price,
       countInstock: countInstock || existingProduct.countInstock,
       featured: featured !== undefined ? featured : existingProduct.featured,
+      isBestSeller: isBestSeller !== undefined ? isBestSeller : existingProduct.isBestSeller,
     }
     // if (totalRating !== undefined) {
     //   updateData.totalRating = totalRating
@@ -263,14 +272,13 @@ const updateProduct = async (req, res) => {
     })
   }
 }
-
-const deleteProduct = async(req, res) => {
+const deleteProduct = async (req, res) => {
   const { id } = req.params
   const product = await Product.findById(id)
-  if(!product) {
+  if (!product) {
     return res.status(404).json({ message: "Not founded product!" })
   }
-  if(product.image && typeof product.image === 'string') {
+  if (product.image && typeof product.image === 'string') {
     const publicId = product.image.split("/").pop().split(".")[0];
     try {
       await cloudinary.uploader.destroy(`products/${publicId}`);
@@ -285,17 +293,17 @@ const deleteProduct = async(req, res) => {
     deleteProduct: deleteProduct ? deleteProduct : 'Delete product unsuccessfully.'
   })
 }
-const searchProduct = async(req, res) => {
+const searchProduct = async (req, res) => {
   const { name, category, brand } = req.query
   try {
     const productCriteria = {}
-    if(name) {
+    if (name) {
       productCriteria.name = { $regex: name, $option: 'i' }
     }
-    if(category) {
+    if (category) {
       productCriteria.category = { $regex: category, $option: 'i' }
     }
-    if(brand) {
+    if (brand) {
       productCriteria.brand = { $regex: brand, $option: 'i' }
     }
     const products = await Product.find(productCriteria)
@@ -309,9 +317,23 @@ const searchProduct = async(req, res) => {
   }
 
 }
+const uploadProductImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Please upload an image" });
+    }
+    const uploadResult = await uploadImageCloudinary(req.file, "products");
 
-
-
+    return res.status(200).json({
+      success: true,
+      message: "Image uploaded successfully",
+      image: uploadResult,
+    });
+  } catch (error) {
+    console.error("Upload product image error:", error);
+    return res.status(500).json({ success: false, message: "Upload failed" });
+  }
+}
 module.exports = {
   createProduct,
   getProduct,
@@ -320,5 +342,6 @@ module.exports = {
   getBestSeller,
   updateProduct,
   deleteProduct,
-  searchProduct
+  searchProduct,
+  uploadProductImage
 }

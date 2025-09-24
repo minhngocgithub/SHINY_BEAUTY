@@ -1,10 +1,9 @@
 <template>
   <div
-    :class="`flex flex-col h-[330px] overflow-hidden product-card-shadow bg-white rounded-xl ${width} relative group`"
+    :class="`flex flex-col h-[330px] overflow-hidden product-card-shadow bg-white rounded-xl ${width} relative group shadow-[0_3px_10px_rgb(0,0,0,0.3)]`"
     @mouseenter="showQuickLook = true"
     @mouseleave="showQuickLook = false"
   >
-    <!-- New Product Badge -->
     <div
       v-if="product.isNewProduct"
       class="absolute z-30 px-2 py-1 text-xs font-semibold text-white rounded-full shadow-lg top-2 left-2 bg-gradient-to-r from-pink-500 to-rose-500"
@@ -30,42 +29,60 @@
       </button>
     </div>
 
+    <!-- Image section - fixed height -->
     <LazyImg
-      class-style="h-[180px] object-cover w-full"
+      class-style="h-[180px] object-cover w-full flex-shrink-0"
       :src="product.imageUrl || product.image"
       alt=""
     />
-    
-    <div class="flex-auto p-3 capitalize">
-      <p class="text-sm font-semibold text-[#191919] truncate-2 pb-2">
+
+    <!-- Content section - structured layout -->
+    <div class="flex flex-col flex-1 p-3 capitalize">
+      <!-- Brand - fixed height -->
+      <p class="text-sm font-semibold text-[#191919] truncate h-5 mb-2">
         {{ product.brand }}
       </p>
-      <p class="text-sm font-semibold text-[#363636] truncate-2">
+      
+      <!-- Product name - fixed height for 2 lines -->
+      <p class="text-sm font-semibold text-[#363636] h-10 mb-2 leading-5 overflow-hidden">
         {{ product.name }}
       </p>
-      <p v-if="product.price" class="mt-1 text-lg font-bold">
-        ${{ product.price }}
-      </p>
-      <p
-        v-if="product?.maxPrice != undefined && product?.minPrice != undefined"
-        class="mt-1 text-lg font-bold"
-      >
-        ${{ product?.minPrice }} - ${{ product?.maxPrice }}
-      </p>
-      <div>
-        <i class="ri-map-pin-2-fill text-primary-200"></i>
-        <span class="ml-2 text-xs text-primary-200">{{
-          product.location
-        }}</span>
+      
+      <!-- Price section -->
+      <div class="mb-2">
+        <p v-if="product.price" class="text-lg font-bold text-[#f88113]">
+          ${{ product.price }}
+        </p>
+        <p
+          v-if="product?.maxPrice != undefined && product?.minPrice != undefined"
+          class="text-lg font-bold"
+        >
+          ${{ product?.minPrice }} - ${{ product?.maxPrice }}
+        </p>
       </div>
-      <div class="text-xs text-primary-200">
-        <span>
-          <i class="ri-star-fill text-[#ffaa28]"></i>
-          <span class="ml-2 mr-1">{{
+      
+      <!-- Rating section - pushed to bottom -->
+      <div class="flex justify-center mt-auto text-xs text-primary-200 align-center">
+        <span class="flex items-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="size-4 text-[#f88113] mr-1"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"
+            />
+          </svg>
+          <span class="">{{
             product.ratings?.average || product.rating || 0
           }}</span>
-          <span>|</span>
-          <span class="ml-1">sold {{ product.sold }}</span>
+          <span class="mx-2">|</span>
+          <span class="">sold {{ product.sold }}</span>
         </span>
       </div>
     </div>
@@ -81,9 +98,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import LazyImg from "../atoms/LazyImg.vue"
-import QuickLookModal from "./QuickLookModal.vue"
+import { ref } from "vue";
+import LazyImg from "../atoms/LazyImg.vue";
+import QuickLookModal from "./QuickLookModal.vue";
 
 defineProps({
   product: {
@@ -94,24 +111,26 @@ defineProps({
     type: String,
     default: "w-[200px]",
   },
-})
+});
 
-const showQuickLook = ref(false)
-const isQuickLookOpen = ref(false)
+const showQuickLook = ref(false);
+const isQuickLookOpen = ref(false);
 
 const openQuickLook = () => {
-  isQuickLookOpen.value = true
-  console.log('Open quick look modal for product:');
-}
+  isQuickLookOpen.value = true;
+  console.log("Open quick look modal for product:");
+};
 
 const handleAddToCart = (data) => {
-  console.log('Add to cart:', data)
-}
+  console.log("Add to cart:", data);
+};
 
 const handleAddToWishlist = (product) => {
-  console.log('Add to wishlist:', product)
+  console.log("Add to wishlist:", product);
   // Implement add to wishlist logic
-}
+};
 
-const closeQuickLook = () => { showQuickLook.value = false }
+const closeQuickLook = () => {
+  showQuickLook.value = false;
+};
 </script>

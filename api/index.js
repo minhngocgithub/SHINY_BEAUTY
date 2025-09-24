@@ -22,10 +22,11 @@ const productRouter = require('../api/routers/productRouter');
 const orderRouter = require('../api/routers/orderRouter');
 const couponRouter = require('../api/routers/couponRouter');
 const paymentRouter = require('../api/routers/paymentRouter');
+const cartRouter = require('../api/routers/cartRouter');
 const categoryRouter = require('../api/routers/categoryRouter');
 const subCategoryRouter = require('../api/routers/subCategoryRouter');
 const oauthRouter = require('../api/routers/oauthRouter');
-
+const bundleProductRouter = require('../api/routers/bundleProductRouter');
 // Connect DB
 const connectDB = async () => {
     try {
@@ -69,13 +70,15 @@ app.use('/api/v1/users', authsRouter);
 app.use('/api/v1/otp', otpRouter);
 app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/product', productRouter);
-app.use('/api/v1/order', orderRouter);
+app.use('/api/v1/orders', orderRouter);
+app.use('/api/v1/cart', cartRouter);
 app.use('/api/v1/coupon', couponRouter);
 app.use('/api/v1/payment', paymentRouter);
 app.use('/api/v1/category', categoryRouter);
 app.use('/api/v1/subCategory', subCategoryRouter);
 app.use('/api/v1/auth/oauth', oauthRouter);
 
+app.use('/api/v1/bundle', bundleProductRouter);
 app.get('/test', (req, res) => {
     res.json('test ok');
 });
@@ -95,8 +98,7 @@ cron.schedule('0 * * * *', async () => {
             },
             { $set: { isNewProduct: false } }
         );
-        
-        // Expire featured products - FIX: Sử dụng cách đúng
+
         const expiredProducts = await Product.find({
             featured: true,
             featuredExpiry: { $lte: now }

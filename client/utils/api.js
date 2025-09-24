@@ -40,7 +40,7 @@ axiosApiInstance.interceptors.response.use(
             } catch (error) {
                 console.error("Error: ", error, originalRequest.url);
                 localStorage.clear()
-                window.location.href = '/login'
+                window.location.href = '/Login-Page'
             }
         }
         return Promise.reject(error)

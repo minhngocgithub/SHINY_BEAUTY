@@ -1,0 +1,184 @@
+/* assets/css/aos-custom.css */
+/* Custom AOS optimizations for ecommerce */
+
+/* Performance optimizations */
+[data-aos] {
+  pointer-events: none;
+}
+[data-aos].aos-animate {
+  pointer-events: auto;
+}
+
+/* Custom easing functions for smoother animations */
+[data-aos][data-aos-easing="ease-out-cubic"] {
+  transition-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  [data-aos] {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Custom animations for ecommerce */
+@keyframes product-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+/* Product showcase specific animations */
+.product-showcase-image {
+  transition: all 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.product-showcase-image:hover {
+  transform: scale(1.05) rotate(1deg);
+}
+
+/* Loading states with shimmer effect */
+.loading-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Stagger animations for product grid */
+.product-grid-item {
+  transition: all 0.3s ease-out;
+}
+
+.product-grid-item:nth-child(1) { animation-delay: 0ms; }
+.product-grid-item:nth-child(2) { animation-delay: 100ms; }
+.product-grid-item:nth-child(3) { animation-delay: 200ms; }
+.product-grid-item:nth-child(4) { animation-delay: 300ms; }
+.product-grid-item:nth-child(5) { animation-delay: 400ms; }
+.product-grid-item:nth-child(6) { animation-delay: 500ms; }
+
+/* Smooth hover effects */
+.smooth-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.smooth-hover:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
+/* Optimize for mobile performance */
+@media (max-width: 768px) {
+  [data-aos] {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  
+  /* Reduce complex animations on mobile */
+  .product-showcase-image:hover {
+    transform: scale(1.02);
+  }
+}
+
+/* Critical CSS for above-the-fold content */
+.hero-section {
+  contain: layout style paint;
+}
+
+/* Lazy loading optimization */
+img.lazy {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+img.lazy.loaded {
+  opacity: 1;
+}
+
+/* Intersection Observer fallback */
+.no-js img.lazy {
+  opacity: 1;
+}
+
+/* Optimize for high DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .high-dpi-optimized {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* Focus management for accessibility */
+.aos-animate:focus {
+  outline: 2px solid #4F46E5;
+  outline-offset: 2px;
+}
+
+/* Performance: GPU acceleration for transform animations */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Custom fade animations optimized for content */
+[data-aos="fade-up-content"] {
+  transform: translate3d(0, 40px, 0);
+  opacity: 0;
+}
+
+[data-aos="fade-up-content"].aos-animate {
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+}
+
+/* Button hover animations */
+.btn-animated {
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+}
+
+.btn-animated::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-animated:hover::before {
+  left: 100%;
+}
+
+/* Optimized for Core Web Vitals */
+.lwv-optimized {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 200px;
+}
+
+/* Print styles (SEO consideration) */
+@media print {
+  [data-aos] {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}

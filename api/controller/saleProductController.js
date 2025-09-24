@@ -1,5 +1,5 @@
 const Product = require('../models/product.models');
-const {  } = require('../middleware/product.middleware');
+const Category = require('../models/category.models');
 const setSaleForProduct = async (req, res) => {
     try {
         const { id } = req.params
@@ -27,8 +27,8 @@ const setSaleForProduct = async (req, res) => {
         product.setSale({
             salePrice,
             discountPercentage,
-            startDate,
-            endDate,
+            saleStartDate,
+            saleEndDate,
             saleType: saleType || 'percentage'
         })
         if (!product.discountPercentage && product.salePrice) {
@@ -225,8 +225,6 @@ const getSaleProducts = async (req, res) => {
                 { saleStartDate: null, saleEndDate: null }
             ]
         };
-
-        // Add search functionality
         if (req.query.search) {
             query.$and = [
                 {
@@ -237,8 +235,6 @@ const getSaleProducts = async (req, res) => {
                 }
             ];
         }
-
-        // Add category filter
         if (req.query.category) {
             query.category = req.query.category;
         }
@@ -298,7 +294,6 @@ const getSaleProducts = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Get sale products error:', error);
         return res.status(500).json({
             status: 'error',
             message: error.message,
@@ -501,98 +496,48 @@ const getSaleStatistics = async (req, res) => {
     }
 };
 const setBulkSale = async (req, res) => {
-    try {
-        const { id, saleData } = req.body;
-        const { discountPercentage, saleStartDate, saleEndDate, saleType = 'percentage' } = saleData;
+  try {
+    const { productIds, salePrice, discountPercentage, saleStartDate, saleEndDate } = req.body;
 
-        // Validation
-        if (!id || !Array.isArray(id) || id.length === 0) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Product IDs array is required',
-                code: 'MISSING_PRODUCT_IDS'
-            });
-        }
-
-        if (!discountPercentage) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Discount percentage is required',
-                code: 'MISSING_DISCOUNT'
-            });
-        }
-
-        if (discountPercentage < 0 || discountPercentage > 100) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Discount percentage must be between 0 and 100',
-                code: 'INVALID_DISCOUNT'
-            });
-        }
-
-        const products = await Product.find({ _id: { $in: id } });
-
-        if (products.length !== id.length) {
-            return res.status(404).json({
-                status: 'error',
-                message: 'Some products not found',
-                code: 'PRODUCTS_NOT_FOUND'
-            });
-        }
-
-        const results = {
-            successful: [],
-            failed: []
-        };
-
-        for (const product of products) {
-            try {
-                product.setSale({
-                    discountPercentage,
-                    startDate: saleStartDate,
-                    endDate: saleEndDate,
-                    saleType
-                });
-
-                await product.save();
-                
-                results.successful.push({
-                    id: product._id,
-                    name: product.name,
-                    discountPercentage: product.discountPercentage,
-                    salePrice: product.salePrice
-                });
-
-            } catch (error) {
-                results.failed.push({
-                    id: product._id,
-                    name: product.name,
-                    error: error.message
-                });
-            }
-        }
-
-        return res.status(200).json({
-            status: 'success',
-            message: `Bulk sale operation completed. ${results.successful.length} successful, ${results.failed.length} failed`,
-            data: {
-                summary: {
-                    totalProcessed: ids.length,
-                    successful: results.successful.length,
-                    failed: results.failed.length
-                },
-                results: results
-            }
-        });
-
-    } catch (error) {
-        console.error('Bulk sale error:', error);
-        return res.status(500).json({
-            status: 'error',
-            message: error.message,
-            code: 'INTERNAL_ERROR'
-        });
+    if (!productIds || productIds.length === 0) {
+      return res.status(400).json({ 
+        status: 'fail', 
+        message: 'No product IDs provided' 
+      });
     }
+
+    // Tạo array bulk operations
+    const bulkOps = productIds.map(id => ({
+      updateOne: {
+        filter: { _id: id },
+        update: {
+          $set: {
+            salePrice,
+            discountPercentage,
+            saleStartDate,
+            saleEndDate,
+            isOnSale: true
+          }
+        }
+      }
+    }));
+
+    // Thực hiện bulkWrite
+    const result = await Product.bulkWrite(bulkOps);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Bulk sale applied successfully',
+      modifiedCount: result.modifiedCount
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Server error',
+      error: error.message
+    });
+  }
 };
 const updateSalePrice = async (req, res) => {
     try {
@@ -781,6 +726,425 @@ const cleanupExpiredSales = async (req, res) => {
         });
     }
 };
+const setSaleForCategory = async (req, res) => {
+    try {
+        const { categoryId } = req.params;
+        const { discountPercentage, saleStartDate, saleEndDate, saleType = 'percentage' } = req.body;
+
+        if (!discountPercentage) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Discount percentage is required',
+                code: 'MISSING_DISCOUNT'
+            });
+        }
+
+        if (discountPercentage < 0 || discountPercentage > 100) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Discount percentage must be between 0 and 100',
+                code: 'INVALID_DISCOUNT'
+            });
+        }
+
+        const products = await Product.find({ 
+            category: categoryId,
+            countInstock: { $gt: 0 }
+        });
+
+        if (products.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'No products found in this category',
+                code: 'NO_PRODUCTS_FOUND'
+            });
+        }
+
+        const Category = require('../models/category.models');
+        const category = await Category.findById(categoryId);
+        const categoryName = category ? category.name : 'Unknown';
+
+        const bulkOperations = products.map(product => {
+            const basePrice = product.originalPrice || product.price;
+            const salePrice = Math.round(basePrice * (1 - discountPercentage / 100) * 100) / 100;
+            
+            return {
+                updateOne: {
+                    filter: { _id: product._id },
+                    update: {
+                        $set: {
+                            isOnSale: true,
+                            salePrice: salePrice,
+                            discountPercentage,
+                            saleStartDate: saleStartDate ? new Date(saleStartDate) : undefined,
+                            saleEndDate: saleEndDate ? new Date(saleEndDate) : undefined,
+                            saleType,
+                            originalPrice: product.originalPrice || product.price
+                        }
+                    }
+                }
+            };
+        });
+
+        const bulkResult = await Product.bulkWrite(bulkOperations);
+
+        const updatedProducts = await Product.find({ 
+            category: categoryId,
+            isOnSale: true 
+        }).select('_id name brand price originalPrice salePrice discountPercentage');
+
+        return res.status(200).json({
+            status: 'success',
+            message: `Sale set for category "${categoryName}". ${bulkResult.modifiedCount} products updated`,
+            data: {
+                summary: {
+                    categoryId,
+                    categoryName,
+                    totalFound: products.length,
+                    successful: bulkResult.modifiedCount,
+                    failed: products.length - bulkResult.modifiedCount,
+                    discountPercentage
+                },
+                bulkWriteResult: {
+                    modifiedCount: bulkResult.modifiedCount,
+                    matchedCount: bulkResult.matchedCount,
+                    upsertedCount: bulkResult.upsertedCount
+                },
+                updatedProducts: updatedProducts.map(product => ({
+                    id: product._id,
+                    name: product.name,
+                    brand: product.brand,
+                    originalPrice: product.originalPrice,
+                    salePrice: product.salePrice,
+                    discountPercentage: product.discountPercentage
+                }))
+            }
+        });
+
+    } catch (error) {
+        console.error('Set category sale error:', error);
+        return res.status(500).json({
+            status: 'error',
+            message: error.message,
+            code: 'INTERNAL_ERROR'
+        });
+    }
+};
+
+const setSaleForBrand = async (req, res) => {
+    try {
+        const { brandName } = req.params;
+        const { discountPercentage, saleStartDate, saleEndDate, saleType = 'percentage' } = req.body;
+
+        if (!discountPercentage) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Discount percentage is required',
+                code: 'MISSING_DISCOUNT'
+            });
+        }
+
+        if (discountPercentage < 0 || discountPercentage > 100) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Discount percentage must be between 0 and 100',
+                code: 'INVALID_DISCOUNT'
+            });
+        }
+
+        const products = await Product.find({ 
+            brand: { $regex: new RegExp(`^${brandName}$`, 'i') },
+            countInstock: { $gt: 0 }
+        });
+
+        if (products.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: `No products found for brand "${brandName}"`,
+                code: 'NO_PRODUCTS_FOUND'
+            });
+        }
+
+        const bulkOperations = products.map(product => {
+            const basePrice = product.originalPrice || product.price;
+            const salePrice = Math.round(basePrice * (1 - discountPercentage / 100) * 100) / 100;
+            
+            return {
+                updateOne: {
+                    filter: { _id: product._id },
+                    update: {
+                        $set: {
+                            isOnSale: true,
+                            salePrice: salePrice,
+                            discountPercentage,
+                            saleStartDate: saleStartDate ? new Date(saleStartDate) : undefined,
+                            saleEndDate: saleEndDate ? new Date(saleEndDate) : undefined,
+                            saleType,
+                            originalPrice: product.originalPrice || product.price
+                        }
+                    }
+                }
+            };
+        });
+
+        const bulkResult = await Product.bulkWrite(bulkOperations);
+
+        const updatedProducts = await Product.find({ 
+            brand: { $regex: new RegExp(`^${brandName}$`, 'i') },
+            isOnSale: true 
+        }).select('_id name brand price originalPrice salePrice discountPercentage');
+
+        return res.status(200).json({
+            status: 'success',
+            message: `Sale set for brand "${brandName}". ${bulkResult.modifiedCount} products updated`,
+            data: {
+                summary: {
+                    brandName,
+                    totalFound: products.length,
+                    successful: bulkResult.modifiedCount,
+                    failed: products.length - bulkResult.modifiedCount,
+                    discountPercentage
+                },
+                bulkWriteResult: {
+                    modifiedCount: bulkResult.modifiedCount,
+                    matchedCount: bulkResult.matchedCount,
+                    upsertedCount: bulkResult.upsertedCount
+                },
+                updatedProducts: updatedProducts.map(product => ({
+                    id: product._id,
+                    name: product.name,
+                    brand: product.brand,
+                    originalPrice: product.originalPrice,
+                    salePrice: product.salePrice,
+                    discountPercentage: product.discountPercentage
+                }))
+            }
+        });
+
+    } catch (error) {
+        console.error('Set brand sale error:', error);
+        return res.status(500).json({
+            status: 'error',
+            message: error.message,
+            code: 'INTERNAL_ERROR'
+        });
+    }
+};
+
+const setSaleForMultipleCategories = async (req, res) => {
+    try {
+        const { categoryIds, discountPercentage, saleStartDate, saleEndDate, saleType = 'percentage' } = req.body;
+
+        if (!categoryIds || !Array.isArray(categoryIds) || categoryIds.length === 0) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Category IDs array is required',
+                code: 'MISSING_CATEGORY_IDS'
+            });
+        }
+
+        if (!discountPercentage) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Discount percentage is required',
+                code: 'MISSING_DISCOUNT'
+            });
+        }
+
+        const products = await Product.find({ 
+            category: { $in: categoryIds },
+            countInstock: { $gt: 0 }
+        });
+
+        if (products.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'No products found in specified categories',
+                code: 'NO_PRODUCTS_FOUND'
+            });
+        }
+
+        const bulkOperations = products.map(product => {
+            const basePrice = product.originalPrice || product.price;
+            const salePrice = Math.round(basePrice * (1 - discountPercentage / 100) * 100) / 100;
+            
+            return {
+                updateOne: {
+                    filter: { _id: product._id },
+                    update: {
+                        $set: {
+                            isOnSale: true,
+                            salePrice: salePrice,
+                            discountPercentage,
+                            saleStartDate: saleStartDate ? new Date(saleStartDate) : undefined,
+                            saleEndDate: saleEndDate ? new Date(saleEndDate) : undefined,
+                            saleType,
+                            originalPrice: product.originalPrice || product.price
+                        }
+                    }
+                }
+            };
+        });
+
+        const bulkResult = await Product.bulkWrite(bulkOperations);
+
+        return res.status(200).json({
+            status: 'success',
+            message: `Bulk category sale completed. ${bulkResult.modifiedCount} products updated`,
+            data: {
+                summary: {
+                    categoryIds,
+                    totalFound: products.length,
+                    successful: bulkResult.modifiedCount,
+                    failed: products.length - bulkResult.modifiedCount,
+                    discountPercentage
+                },
+                bulkWriteResult: {
+                    modifiedCount: bulkResult.modifiedCount,
+                    matchedCount: bulkResult.matchedCount,
+                    upsertedCount: bulkResult.upsertedCount
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Multiple category sale error:', error);
+        return res.status(500).json({
+            status: 'error',
+            message: error.message,
+            code: 'INTERNAL_ERROR'
+        });
+    }
+};
+
+const endSaleForCategory = async (req, res) => {
+    try {
+        const { categoryId } = req.params;
+
+        const products = await Product.find({ 
+            category: categoryId,
+            isOnSale: true 
+        });
+
+        if (products.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'No products on sale found in this category',
+                code: 'NO_SALE_PRODUCTS_FOUND'
+            });
+        }
+
+        const bulkOperations = products.map(product => ({
+            updateOne: {
+                filter: { _id: product._id },
+                update: {
+                    $set: {
+                        isOnSale: false
+                    },
+                    $unset: {
+                        salePrice: "",
+                        discountPercentage: "",
+                        saleStartDate: "",
+                        saleEndDate: "",
+                        saleType: ""
+                    }
+                }
+            }
+        }));
+
+        const bulkResult = await Product.bulkWrite(bulkOperations);
+
+        return res.status(200).json({
+            status: 'success',
+            message: `Sale ended for category. ${bulkResult.modifiedCount} products updated`,
+            data: {
+                summary: {
+                    categoryId,
+                    totalFound: products.length,
+                    successful: bulkResult.modifiedCount,
+                    failed: products.length - bulkResult.modifiedCount
+                },
+                bulkWriteResult: {
+                    modifiedCount: bulkResult.modifiedCount,
+                    matchedCount: bulkResult.matchedCount
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('End category sale error:', error);
+        return res.status(500).json({
+            status: 'error',
+            message: error.message,
+            code: 'INTERNAL_ERROR'
+        });
+    }
+};
+
+const endSaleForBrand = async (req, res) => {
+    try {
+        const { brandName } = req.params;
+
+        const products = await Product.find({ 
+            brand: { $regex: new RegExp(`^${brandName}$`, 'i') },
+            isOnSale: true 
+        });
+
+        if (products.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: `No products on sale found for brand "${brandName}"`,
+                code: 'NO_SALE_PRODUCTS_FOUND'
+            });
+        }
+
+        const bulkOperations = products.map(product => ({
+            updateOne: {
+                filter: { _id: product._id },
+                update: {
+                    $set: {
+                        isOnSale: false
+                    },
+                    $unset: {
+                        salePrice: "",
+                        discountPercentage: "",
+                        saleStartDate: "",
+                        saleEndDate: "",
+                        saleType: ""
+                    }
+                }
+            }
+        }));
+
+        const bulkResult = await Product.bulkWrite(bulkOperations);
+
+        return res.status(200).json({
+            status: 'success',
+            message: `Sale ended for brand "${brandName}". ${bulkResult.modifiedCount} products updated`,
+            data: {
+                summary: {
+                    brandName,
+                    totalFound: products.length,
+                    successful: bulkResult.modifiedCount,
+                    failed: products.length - bulkResult.modifiedCount
+                },
+                bulkWriteResult: {
+                    modifiedCount: bulkResult.modifiedCount,
+                    matchedCount: bulkResult.matchedCount
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('End brand sale error:', error);
+        return res.status(500).json({
+            status: 'error',
+            message: error.message,
+            code: 'INTERNAL_ERROR'
+        });
+    }
+};
+
 module.exports = {
     setSaleForProduct,
     endSaleForProduct,
@@ -791,5 +1155,10 @@ module.exports = {
     setBulkSale,
     updateSalePrice,
     getExpiredSales,
-    cleanupExpiredSales
+    cleanupExpiredSales,
+    setSaleForCategory,
+    setSaleForBrand,
+    setSaleForMultipleCategories,
+    endSaleForCategory,
+    endSaleForBrand
 }

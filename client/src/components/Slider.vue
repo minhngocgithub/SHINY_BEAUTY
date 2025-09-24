@@ -83,7 +83,7 @@ export default {
     name: 'CosmeticSlider',
     setup() {
         const contents = ref([
-            { image: 'src/assets/image/slider/slider_01.png', title: "K18 AirWash Dry Shampoo", router: '/' },
+            { image: 'src/assets/image/slider/banner-saleLips-30.png', title: "K18 AirWash Dry Shampoo", router: '/' },
             { image:"src/assets/image/slider/slider_02.png", title: "New! New Clinically proven to reduce oil and elimate odor for up to this day", router: "/" },
             { image:"src/assets/image/slider/slider_03.png", title: "Concealers for Blemishes & Redness", router: "/" },
             { image: "src/assets/image/slider/slider_04.png", title: "Big In Beauty", router: "/"},

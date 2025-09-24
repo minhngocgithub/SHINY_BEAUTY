@@ -1,7 +1,46 @@
 const mongoose = require('mongoose')
-const crypto = require('crypto');
-const { type } = require('os');
 
+const cartItemSchema = new mongoose.Schema({
+    product: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product",
+    },
+    bundle: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ProductBundle",
+    },
+    quantity: {
+        type: Number,
+        required: true,
+        default: 1,
+        min: 1
+    },
+    itemType: {
+        type: String,
+        enum: ['product', 'bundle'],
+        required: true,
+        default: 'product'
+    },
+    addedAt: {
+        type: Date,
+        default: Date.now
+    }
+}, {
+    timestamps: true
+})
+cartItemSchema.pre('save', function(next) {
+    if ((this.product && this.bundle) || (!this.product && !this.bundle)) {
+        const err = new Error('Cart item must have either product or bundle, but not both');
+        return next(err);
+    }
+    if (this.product) {
+        this.itemType = 'product';
+    } else if (this.bundle) {
+        this.itemType = 'bundle';
+    }
+    
+    next();
+});
 const userSchema = mongoose.Schema({
     name: {
         type: String,
@@ -71,18 +110,7 @@ const userSchema = mongoose.Schema({
             }
         }
     },
-    cartItems: [
-        {
-            quantity: {
-                type: Number,
-                default: 1,
-            },
-            product: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Product",
-            },
-        },
-    ],
+    cartItems: [cartItemSchema],
     loyaltyProfile: {
         tier: {
             type: String,
@@ -145,6 +173,9 @@ userSchema.index({ email: 1 }, { unique: true })
 userSchema.index({ 'loyaltyProfile.tier': -1 })
 userSchema.index({ 'loyaltyProfile.totalSpent': -1 })
 userSchema.index({ 'loyaltyProfile.totalOrders': -1 })
+userSchema.index({ 'cartItems.product': 1 });
+userSchema.index({ 'cartItems.bundle': 1 });
+userSchema.index({ 'cartItems.addedAt': 1 });
 
 userSchema.virtual('isNewCustomer').get(function() {
     return this.loyaltyProfile.totalOrders === 0;
@@ -156,7 +187,7 @@ userSchema.virtual('customerLifespanDays').get(function() {
 })
 userSchema.methods.updateLoyaltyProfile = function(orderData) {
     if(!orderData || !orderData.totalPrice) {
-        throw new Error('Order data with totalPrice is required to update loyalty profile');
+        console.log('Order data with totalPrice is required to update loyalty profile');
     }
     this.loyaltyProfile.totalSpent += orderData.totalPrice;
     this.loyaltyProfile.totalOrders += 1;
@@ -190,7 +221,7 @@ userSchema.methods.calculateTier = function() {
 
 userSchema.methods.addLoyaltyPoints = function(points) {
     if (typeof points !== 'number' || points < 0) {
-        throw new Error('Points must be a positive number');
+        console.log('Points must be a positive number');
     }
     
     this.loyaltyProfile.points += points;
@@ -198,11 +229,11 @@ userSchema.methods.addLoyaltyPoints = function(points) {
 };
 userSchema.methods.spendLoyaltyPoints = function(points) {
     if (typeof points !== 'number' || points < 0) {
-        throw new Error('Points must be a positive number');
+        console.log('Points must be a positive number');
     }
     
     if (this.loyaltyProfile.points < points) {
-        throw new Error('Insufficient points');
+        console.log('Insufficient points');
     }
     
     this.loyaltyProfile.points -= points;
@@ -250,6 +281,64 @@ userSchema.methods.getTierBenefits = function() {
     
     return TIER_BENEFITS[this.loyaltyProfile.tier] || TIER_BENEFITS.NEW_CUSTOMER;
 };
+userSchema.methods.getCartTotal = async function() {
+    await this.populate([
+        { 
+            path: 'cartItems.product', 
+            select: 'name price currentPrice isSaleActive discountPercentage' 
+        },
+        { 
+            path: 'cartItems.bundle', 
+            select: 'name bundlePrice discountPercentage' 
+        }
+    ]);
+
+    let total = 0;
+    let itemCount = 0;
+
+    for (const item of this.cartItems) {
+        let itemPrice = 0;
+        
+        if (item.itemType === 'product' && item.product) {
+            itemPrice = item.product.currentPrice || item.product.price;
+        } else if (item.itemType === 'bundle' && item.bundle) {
+            itemPrice = item.bundle.bundlePrice;
+        }
+        
+        total += itemPrice * item.quantity;
+        itemCount += item.quantity;
+    }
+
+    return {
+        subtotal: Math.round(total * 100) / 100,
+        itemCount,
+        totalItems: this.cartItems.length
+    };
+};
+
+userSchema.methods.clearExpiredCartItems = async function() {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    this.cartItems = this.cartItems.filter(item => item.addedAt > sevenDaysAgo);
+    await this.save();
+    
+    return this.cartItems.length;
+};
+
+userSchema.methods.findCartItem = function(productId, bundleId) {
+    return this.cartItems.find(item => {
+        if (productId && item.product) {
+            return item.product.toString() === productId.toString();
+        }
+        if (bundleId && item.bundle) {
+            return item.bundle.toString() === bundleId.toString();
+        }
+        return false;
+    });
+};
+
+
 userSchema.pre('save', function(next) {
     // Ensure loyalty profile exists
     if (!this.loyaltyProfile) {
