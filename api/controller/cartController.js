@@ -1,7 +1,7 @@
 const Product = require("../models/product.models")
 const User = require("../models/user.models")
 const ProductBundle = require("../models/productBundle.models")
-
+const SaleProgramUtils = require("../utils/saleProgram.utils")
 const addToCard = async (req, res) => {
     try {
         const { productId, bundleId, quantity = 1 } = req.body
@@ -135,45 +135,59 @@ const getCart = async (req, res) => {
             });
         }
 
-        // Tính toán cart summary
-        let subtotal = 0
-        let totalItems = 0
+        // Apply sale programs to cart items
+        const cartWithPrograms = await SaleProgramUtils.applyProgramsToCart(user.cartItems, user);
+        
+        // Calculate cart totals
+        let subtotal = 0;
+        let totalItems = 0;
+        let totalDiscount = 0;
 
-        const cartItems = user.cartItems.map(item => {
-            let itemPrice = 0
-            let itemName = ''
-            let itemImage = ''
-
-            if (item.itemType === 'product' && item.product) {
-                itemPrice = item.product.currentPrice || item.product.price
-                itemName = item.product.name
-                itemImage = item.product.images?.[0]?.url || ''
-            } else if (item.itemType === 'bundle' && item.bundle) {
-                itemPrice = item.bundle.bundlePrice;
-                itemName = item.bundle.name
-                itemImage = item.bundle.image?.[0]?.url || ''
-            }
-
-            const itemTotal = itemPrice * item.quantity
-            subtotal += itemTotal
-            totalItems += item.quantity
+        const enhancedCartItems = cartWithPrograms.map(item => {
+            const itemSubtotal = item.finalPrice || 0;
+            const itemDiscount = item.discount || 0;
+            
+            subtotal += itemSubtotal;
+            totalItems += item.quantity;
+            totalDiscount += itemDiscount;
 
             return {
-                ...item.toObject(),
-                itemPrice,
-                itemTotal,
-                itemName,
-                itemImage
+                ...item.toObject ? item.toObject() : item,
+                savings: (item.originalPrice || 0) - itemSubtotal,
+                discountSource: item.appliedProgram ? 'sale_program' : 
+                               (item.product?.isSaleActive ? 'product_sale' : 'none'),
+                finalPrice: itemSubtotal,
+                discount: itemDiscount
             };
         });
 
+        // Get cart-level programs (free shipping, gifts, etc.)
+        const cartLevelPrograms = await SaleProgramUtils.getCartLevelPrograms(
+            { subtotal, items: enhancedCartItems }, 
+            user
+        );
+
+        // Apply cart-level benefits
+        const cartBenefits = SaleProgramUtils.applyCartLevelBenefits(
+            { subtotal }, 
+            cartLevelPrograms
+        );
+
         res.status(200).json({
             success: true,
-            cartItems,
+            cartItems: enhancedCartItems,
             summary: {
                 totalItems,
-                subtotal,
-                itemCount: user.cartItems.length
+                subtotal: subtotal,
+                totalDiscount: totalDiscount + cartBenefits.additionalDiscount,
+                itemCount: user.cartItems.length,
+                cartBenefits,
+                applicablePrograms: cartLevelPrograms.map(program => ({
+                    id: program._id,
+                    title: program.title,
+                    type: program.type,
+                    description: program.shortDescription
+                }))
             }
         });
 

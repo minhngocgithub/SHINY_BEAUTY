@@ -21,26 +21,55 @@ const getAllCoupon = async(req, res) => {
 
 const validateCoupon = async(req, res) => {
     try {
-        const {code} = req.body
-        const coupon = await Coupon.findOne({ code: code, user: req.user._id, isActive: true })
-        if(!coupon) {
-            return res.status(404).json({ message: "Coupon not found" })
+        const { code } = req.body;
+        const user = req.user;
+
+        if (!code) {
+            return res.status(400).json({ message: "Coupon code is required" });
         }
-        if(coupon.expire < new Date()) {
-            coupon.isActive = false
-            await coupon.save()
-            return res.status(404).json({ message: "Coupon expired" });
+        const legacyCoupon = await Coupon.findOne({ 
+            code: code, 
+            user: req.user._id, 
+            isActive: true 
+        });
+
+        if (legacyCoupon) {
+            if (legacyCoupon.expire < new Date()) {
+                legacyCoupon.isActive = false;
+                await legacyCoupon.save();
+                return res.status(404).json({ message: "Coupon expired" });
+            }
+
+            return res.json({
+                message: "Coupon is valid",
+                code: legacyCoupon.code,
+                discountPercentage: legacyCoupon.discountPercentage,
+                source: 'legacy'
+            });
+        }
+        const salePrograms = await SaleProgramService.getActiveSalePrograms({ user });
+        const couponProgram = salePrograms.find(program => 
+            program.conditions.requiredPromoCode?.toLowerCase() === code.toLowerCase()
+        );
+
+        if (!couponProgram) {
+            return res.status(404).json({ message: "Coupon not found or expired" });
         }
         res.json({
             message: "Coupon is valid",
-            code: coupon.code,
-            discountPercentage: coupon.discountPercentage
-        })
+            code: couponProgram.conditions.requiredPromoCode,
+            discountPercentage: couponProgram.benefits.discountPercentage,
+            discountAmount: couponProgram.benefits.discountAmount,
+            programId: couponProgram._id,
+            title: couponProgram.title,
+            source: 'sale_program'
+        });
 
     } catch (error) {
         res.status(500).json({ message: "Server error", error });
     }
 }
+
 
 const createCoupon = async(req, res) => {
     try {
@@ -66,5 +95,4 @@ module.exports = {
     createCoupon,
     getAllCoupon,
     deleteCoupon
-
 }

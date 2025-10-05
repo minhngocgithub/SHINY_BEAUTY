@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const session = require('express-session');
 const cron = require('node-cron');
-
+const {initializeCronJobs} = require('./jobs/index')
 dotenv.config();
 
 const passport = require('./config/passport');
@@ -27,6 +27,7 @@ const categoryRouter = require('../api/routers/categoryRouter');
 const subCategoryRouter = require('../api/routers/subCategoryRouter');
 const oauthRouter = require('../api/routers/oauthRouter');
 const bundleProductRouter = require('../api/routers/bundleProductRouter');
+const saleProgramRouter = require('../api/routers/saleProgramRouter');
 // Connect DB
 const connectDB = async () => {
     try {
@@ -77,173 +78,13 @@ app.use('/api/v1/payment', paymentRouter);
 app.use('/api/v1/category', categoryRouter);
 app.use('/api/v1/subCategory', subCategoryRouter);
 app.use('/api/v1/auth/oauth', oauthRouter);
-
+app.use('/api/v1/sale-programs', saleProgramRouter);
 app.use('/api/v1/bundle', bundleProductRouter);
 app.get('/test', (req, res) => {
     res.json('test ok');
-});
+})
 
-// Cron Jobs
-cron.schedule('0 * * * *', async () => {
-    try {
-        console.log('Running hourly maintenance...');
-        
-        const now = new Date();
-        
-        // Update new product status
-        await Product.updateMany(
-            {
-                isNewProduct: true,
-                newUntil: { $lte: now }
-            },
-            { $set: { isNewProduct: false } }
-        );
-
-        const expiredProducts = await Product.find({
-            featured: true,
-            featuredExpiry: { $lte: now }
-        });
-
-        for (const product of expiredProducts) {
-            product.removeFeatured('Auto-expired');
-            await product.save();
-        }
-        
-        // End expired sales - FIX: Sử dụng method có sẵn
-        const expiredSales = await Product.find({
-            isOnSale: true,
-            saleEndDate: { $lte: now }
-        });
-        
-        for (const product of expiredSales) {
-            product.endSale();
-            await product.save();
-        }
-        
-        console.log(`Hourly maintenance completed - Updated ${expiredProducts.length} featured products, ${expiredSales.length} expired sales`);
-        
-    } catch (error) {
-        console.error('Hourly maintenance error:', error);
-    }
-});
-
-cron.schedule('0 2 * * *', async () => {
-    try {
-        console.log('Running daily auto-promotion...');
-        
-        const candidates = await Product.find({
-            featured: false,
-            countInstock: { $gt: 0 },
-            sold: { $gte: 3 },
-            'ratings.average': { $gte: 3.5 }
-        }).limit(30);
-        
-        let promotedCount = 0;
-        const maxPromotions = 8;
-        
-        for (const product of candidates) {
-            if (promotedCount >= maxPromotions) break;
-            
-            const trendingScore = product.calculateTrendingScore();
-            
-            if (trendingScore >= 60) {
-                let featuredType = 'homepage';
-                let duration = 15;
-                
-                if (trendingScore >= 85) {
-                    featuredType = 'banner';
-                    duration = 7;
-                } else if (trendingScore >= 75) {
-                    featuredType = 'trending';
-                    duration = 10;
-                }
-                
-                const expiry = new Date();
-                expiry.setDate(expiry.getDate() + duration);
-                
-                // FIX: Sử dụng method có sẵn
-                const success = product.setFeatured({
-                    type: featuredType,
-                    order: trendingScore,
-                    expiry,
-                    reason: `Auto-promoted (score: ${trendingScore})`
-                });
-                
-                if (success) {
-                    product.trendingScore = trendingScore;
-                    await product.save();
-                    promotedCount++;
-                }
-            }
-        }
-        
-        console.log(`Auto-promoted ${promotedCount} products`);
-        
-    } catch (error) {
-        console.error('Auto-promotion error:', error);
-    }
-});
-
-cron.schedule('0 */6 * * *', async () => {
-    try {
-        console.log('Updating trending scores...');
-        
-        const products = await Product.find({
-            $or: [
-                { featured: true },
-                { sold: { $gt: 0 } },
-                { isNewProduct: true }
-            ]
-        });
-        
-        let updatedCount = 0;
-        
-        for (const product of products) {
-            const newScore = product.calculateTrendingScore();
-            if (Math.abs(newScore - (product.trendingScore || 0)) > 5) {
-                product.trendingScore = newScore;
-                await product.save();
-                updatedCount++;
-            }
-        }
-        
-        console.log(`Trending scores updated for ${updatedCount} products`);
-        
-    } catch (error) {
-        console.error('Trending score update error:', error);
-    }
-});
-
-cron.schedule('0 3 1 * *', async () => {
-    try {
-        console.log('Monthly cleanup...');
-        
-        const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-        
-        const result = await Product.updateMany(
-            {
-                featured: false,
-                featuredExpiry: { $lt: threeMonthsAgo }
-            },
-            {
-                $unset: {
-                    'featuredMetrics.views': '',
-                    'featuredMetrics.clicks': '',
-                    'featuredViews': '',
-                    'featuredClicks': ''
-                }
-            }
-        );
-        
-        console.log(`Monthly cleanup completed - Cleaned ${result.modifiedCount} products`);
-        
-    } catch (error) {
-        console.error('Monthly cleanup error:', error);
-    }
-});
-
-console.log('All cron jobs initialized');
+initializeCronJobs();
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

@@ -2,11 +2,6 @@ const User = require('../models/user.models');
 const Order = require('../models/order.models');
 
 class LoyaltyService {
-    /**
-     * Get tier benefits for a specific tier
-     * @param {string} tier - User tier
-     * @returns {Object} Tier benefits
-     */
     static getTierBenefits(tier) {
         const TIER_BENEFITS = {
             NEW_CUSTOMER: {
@@ -48,13 +43,7 @@ class LoyaltyService {
         
         return TIER_BENEFITS[tier] || TIER_BENEFITS.NEW_CUSTOMER;
     }
-    
-    /**
-     * Calculate discount amount for user
-     * @param {Object} user - User document
-     * @param {number} orderAmount - Order amount
-     * @returns {number} Discount amount
-     */
+
     static calculateDiscount(user, orderAmount) {
         if (!user || !user.loyaltyProfile) {
             return 0;
@@ -63,13 +52,7 @@ class LoyaltyService {
         const benefits = this.getTierBenefits(user.loyaltyProfile.tier);
         return Math.round((orderAmount * benefits.discountRate) * 100) / 100;
     }
-    
-    /**
-     * Check if user is eligible for free shipping
-     * @param {Object} user - User document
-     * @param {number} orderAmount - Order amount
-     * @returns {boolean} Is eligible for free shipping
-     */
+  
     static isEligibleForFreeShipping(user, orderAmount) {
         if (!user || !user.loyaltyProfile) {
             return orderAmount >= 100; // Default threshold
@@ -79,12 +62,6 @@ class LoyaltyService {
         return orderAmount >= benefits.freeShippingThreshold;
     }
     
-    /**
-     * Calculate loyalty points to earn from order
-     * @param {Object} user - User document
-     * @param {number} orderAmount - Order amount (items only, no shipping/tax)
-     * @returns {number} Points to earn
-     */
     static calculatePointsToEarn(user, orderAmount) {
         if (!user || !user.loyaltyProfile) {
             return Math.floor(orderAmount); // Default 1:1 ratio
@@ -93,27 +70,18 @@ class LoyaltyService {
         const benefits = this.getTierBenefits(user.loyaltyProfile.tier);
         return Math.floor(orderAmount * benefits.pointsMultiplier);
     }
-    
-    /**
-     * Get recommendation strategy based on user profile
-     * @param {Object} user - User document
-     * @returns {Object} Strategy with bestSeller and newProduct ratios
-     */
     static getRecommendationStrategy(user) {
-        // Default strategy for non-authenticated users
         if (!user || !user.loyaltyProfile) {
             return { bestSeller: 0.65, newProduct: 0.35 };
         }
         
         const tier = user.loyaltyProfile.tier;
         const isNewCustomer = user.loyaltyProfile.totalOrders === 0;
-        
-        // Override for completely new customers
+
         if (isNewCustomer) {
             return { bestSeller: 0.8, newProduct: 0.2 };
         }
-        
-        // Time-based adjustments
+
         const hour = new Date().getHours();
         const isEveningOrWeekend = hour >= 18 || [0, 6].includes(new Date().getDay());
         
@@ -139,7 +107,6 @@ class LoyaltyService {
                 strategy = { bestSeller: 0.65, newProduct: 0.35 };
         }
         
-        // Evening/weekend adjustment - increase new products by 10%
         if (isEveningOrWeekend && tier !== 'NEW_CUSTOMER') {
             const adjustment = 0.1;
             strategy.newProduct = Math.min(0.9, strategy.newProduct + adjustment);
@@ -176,12 +143,6 @@ class LoyaltyService {
             console.log(`Error getting loyalty dashboard: ${error.message}`);
         }
     }
-    
-    /**
-     * Get information about next tier
-     * @param {Object} user - User document
-     * @returns {Object|null} Next tier info or null if already at highest tier
-     */
     static getNextTierInfo(user) {
         const currentTier = user.loyaltyProfile.tier;
         const totalSpent = user.loyaltyProfile.totalSpent;

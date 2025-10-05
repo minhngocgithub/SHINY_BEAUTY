@@ -21,9 +21,12 @@ import ResetPassword from '../views/auth/ResetPassword.vue'
 import SaleView from '../views/product-page/SaleView.vue'
 import FeaturedView from '../views/product-page/FeaturedView.vue'
 import productDetail from '../views/ProductDetail.vue'
+//  Sale Program
+import SaleProgram from '../components/SaleProgram.vue'
+import SaleProgramProducts from '../views/product-page/SaleProgramProducts.vue'
 const routes = [
-    {   
-        path: '/HomeView', 
+    {
+        path: '/HomeView',
         name: 'HomeView',
         component: HomeView
     },
@@ -42,7 +45,7 @@ const routes = [
         name: "Admin",
         component: AdminView,
         children: [
-            { 
+            {
                 path: '/admin/manage-product',
                 name: 'ProductManage',
                 component: ProductManage
@@ -59,7 +62,7 @@ const routes = [
             }
 
         ]
-    },   
+    },
     {
         path: '/Profile',
         name: 'ShopProfile',
@@ -78,7 +81,31 @@ const routes = [
                 name: 'ProductDetail',
                 component: productDetail,
             },
-            
+
+        ]
+    },
+    {
+        path: '/sale-programs',
+        children: [
+            {
+                path: '',
+                name: 'SaleProgram',
+                component: SaleProgram,
+                meta: {
+                    title: 'All Sale Programs',
+                    breadcrumb: 'Sale Programs'
+                }
+            },
+            {
+                path: ':id/products',
+                name: 'SaleProgramProducts',
+                component: SaleProgramProducts,
+                meta: {
+                    title: 'Sale Products',
+                    breadcrumb: 'Products'
+                }
+            }
+
         ]
     },
     {
@@ -106,7 +133,7 @@ const routes = [
         name: 'OAuthError',
         component: OAuthCallback,
     },
-    
+
     {
         path: '/:pathMatch(.*)*',
         name: 'NotFound404',
@@ -116,7 +143,14 @@ const routes = [
 ]
 
 const router = createRouter({
-    history: createWebHistory(),
-    routes
+    history: createWebHistory(import.meta.env.BASE_URL),
+    routes,
+    scrollBehavior(to, from, savedPosition) {
+        if (savedPosition) {
+            return savedPosition
+        } else {
+            return { top: 0, behavior: "smooth" }
+        }
+    },
 })
 export default router

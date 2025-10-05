@@ -215,8 +215,6 @@ const updateProduct = async (req, res) => {
         if (existingProduct.image && existingProduct.image.public_id) {
           await deleteImageFromCloudinary(existingProduct.image.public_id)
         }
-
-        // Upload ảnh base64 mới
         cloudinaryRes = await cloudinary.uploader.upload(image, {
           folder: "products",
           transformation: [{ width: 800, height: 600, crop: "limit" }],

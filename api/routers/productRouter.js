@@ -15,7 +15,7 @@ router.delete('/:id', authenticate, authorizeAdmin, productController.deleteProd
 
 router.post('/addProduct', authenticate, authorizeAdmin, productController.createProduct)
 router.put('/updateProduct/:id', authenticate, authorizeAdmin, productController.updateProduct)
-router.post('/upload-image', authenticate, authorizeAdmin,upload.single("image"), productController.uploadProductImage)
+router.post('/upload-image', authenticate, authorizeAdmin, upload.single("image"), productController.uploadProductImage)
 // Feature a product
 router.get('/featured', featuredController.getFeaturedProducts)
 router.get('/featured/:type', authenticate, featuredController.getFeaturedByType)

@@ -7,9 +7,8 @@
       data-aos="fade-down"
       data-aos-duration="1000"
     >
-      <Slider />
+      <SaleProgram />
     </div>
-    
     <div 
       class="pb-12"
       data-aos="fade-up"
@@ -47,7 +46,7 @@
 import { onMounted, ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import Header from '../components/Header.vue'
-import Slider from '../components/Slider.vue'
+import SaleProgram from '../components/SaleProgram.vue'
 import BestSeller from '../components/BestSeller.vue'
 import FeaturedProduct from '../components/Featured.vue'
 import FloatingCart from '../components/FloatingCart.vue'
@@ -61,29 +60,21 @@ const authStore = useAuthStore()
 const showcaseDescription = ref(
   'Discover our premium cosmetic collection, carefully curated to enhance your natural beauty with innovative formulations and luxurious textures that deliver exceptional results.'
 )
-
-// Handle cart toggle event
 const handleToggleCart = () => {
   router.push('/cart')
 }
 
 onMounted(async () => {
-  // Load auth state
   authStore.loadFromStorage()
-  
-  // Wait for DOM updates
+
   await nextTick()
-  
-  // Refresh AOS after all components loaded
   setTimeout(() => {
     refreshAOS()
   }, 100)
-  
-  // SEO: Add structured data
+
   addStructuredData()
 })
 
-// SEO: Add JSON-LD structured data
 const addStructuredData = () => {
   const structuredData = {
     "@context": "https://schema.org",
@@ -106,8 +97,6 @@ const addStructuredData = () => {
       }]
     }
   }
-  
-  // Add to head
   const script = document.createElement('script')
   script.type = 'application/ld+json'
   script.textContent = JSON.stringify(structuredData)
