@@ -9,35 +9,42 @@
     >
       <SaleProgram />
     </div>
-    <div 
+    <section 
       class="pb-12"
       data-aos="fade-up"
       data-aos-duration="1000"
       data-aos-delay="200"
     >
       <BestSeller />
-    </div>
+    </section>
     
     <!-- New Product Showcase Section -->
-    <div class="pb-12">
+    <section class="pb-6">
       <FeaturedProduct 
         section-title="Featured Collection"
         brand-name="Luxury"
         collection-name="Premium collection"
         :description="showcaseDescription"
       />
-    </div>
+    </section>
     
-    <!-- Additional sections can be added here with AOS -->
-    <div 
-      class="pb-12"
+    <section 
+      class=""
       data-aos="fade-up"
       data-aos-duration="1000"
       data-aos-delay="400"
     >
-      <!-- Future: BestSellers, NewArrivals, etc. -->
-    </div>
-     
+      <QuickLink />
+    </section>
+    <!-- Additional sections can be added here with AOS -->
+    <section 
+      class="px-16"
+      data-aos="fade-up"
+      data-aos-duration="1000"
+      data-aos-delay="400"
+    >
+      <NewArrivals />
+    </section>
     <FloatingCart @toggle-cart="handleToggleCart" />
   </section>
 </template>
@@ -50,6 +57,9 @@ import SaleProgram from '../components/SaleProgram.vue'
 import BestSeller from '../components/BestSeller.vue'
 import FeaturedProduct from '../components/Featured.vue'
 import FloatingCart from '../components/FloatingCart.vue'
+import NewArrivals from '../components/NewArrival.vue'
+import QuickLink from '../components/QuickLink.vue'
+import Footer from '../components/Footer.vue'
 import { useAuthStore } from '../store/auth.store'
 import { refreshAOS } from '../../utils/aos'
 

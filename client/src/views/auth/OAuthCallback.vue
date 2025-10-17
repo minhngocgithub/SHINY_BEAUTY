@@ -150,7 +150,7 @@ export default {
     };
 
     const redirectToHome = () => {
-      router.push("/HomeView");
+      router.push("/");
     };
 
     const retryOAuth = () => {

@@ -2,6 +2,8 @@ const Product = require('../models/product.models')
 const { uploadImageCloudinary, deleteImageFromCloudinary } = require('../utils/upload.service')
 const slugify = require('slugify')
 const cloudinary = require('../config/cloudinary')
+const Review = require('../models/review.models')
+const SaleProgramUtils = require('../utils/saleProgram.utils');
 
 const createProduct = async (req, res) => {
   try {
@@ -106,62 +108,152 @@ const createProduct = async (req, res) => {
 const getProduct = async (req, res) => {
   try {
     const { id } = req.params
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid product ID'
+      })
+    }
 
     const product = await Product.findById(id)
+      .populate('category', 'name slug')
+      .lean()
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      })
+    }
+
     return res.status(200).json({
-      success: product ? true : false,
-      productData: product ? product : 'Cannot get product'
+      success: true,
+      productData: product
     })
   } catch (error) {
-    return res.status(404).json({ message: 'Not found any product', error })
+    console.error('Get Product Error:', error)
+    return res.status(500).json({
+      success: false,
+      message: 'Error retrieving product',
+      error: error.message
+    })
   }
-
 }
+
 const getNewProduct = async (req, res) => {
   try {
-    const limit = req.query.limit * 1 || 10
-    const products = await Product.find({ isNewProduct: true }).limit(limit).sort("-createAt")
+    const limit = parseInt(req.query.limit) || 10
+    const products = await Product.find({ isNewProduct: true })
+      .populate('category', 'name slug')
+      .limit(limit)
+      .sort('-createdAt')
+      .lean()
 
     return res.status(200).json({
-      status: "success",
-      totals: products.length,
-      data: products
+      success: true,
+      total: products.length,
+      products
     })
   } catch (error) {
+    console.error('Get New Products Error:', error)
     return res.status(500).json({
-      status: "failed",
+      success: false,
+      message: 'Error retrieving new products',
       error: error.message
     })
   }
 }
 const getBestSeller = async (req, res) => {
   try {
-    const limit = req.query.limit * 1 || 10
-    const products = await Product.find({ isBestSeller: true }).limit(limit).sort('-sold')
-    if (products) {
-      return res.status(200).json({
-        status: "success",
-        totals: products.length,
-        data: {
-          products
-        }
-      })
-    }
+    const limit = parseInt(req.query.limit) || 10
+    const products = await Product.find({ isBestSeller: true })
+      .populate('category', 'name slug')
+      .limit(limit)
+      .sort('-sold')
+      .lean()
+
+    return res.status(200).json({
+      success: true,
+      total: products.length,
+      products
+    })
   } catch (error) {
-    return res.status(404).json({
-      status: "failed",
+    console.error('Get Best Sellers Error:', error)
+    return res.status(500).json({
+      success: false,
+      message: 'Error retrieving best sellers',
       error: error.message
     })
   }
 }
 const getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find({})
-    return res.status(200).json({ products })
-  } catch (error) {
-    return res.status(404).json({ message: 'Not found any product!', error })
-  }
+    const {
+      page = 1,
+      limit = 12,
+      category,
+      brand,
+      minPrice,
+      maxPrice,
+      minRating,
+      search,
+      sort = '-createdAt',
+      inStock
+    } = req.query
 
+    const filter = {}
+
+    if (category) filter.category = category
+    if (brand) filter.brand = new RegExp(brand, 'i')
+    if (minPrice || maxPrice) {
+      filter.price = {}
+      if (minPrice) filter.price.$gte = Number(minPrice)
+      if (maxPrice) filter.price.$lte = Number(maxPrice)
+    }
+    if (minRating) filter['ratings.average'] = { $gte: Number(minRating) }
+    if (search) {
+      filter.$or = [
+        { name: new RegExp(search, 'i') },
+        { description: new RegExp(search, 'i') },
+        { brand: new RegExp(search, 'i') }
+      ]
+    }
+    if (inStock === 'true') filter.countInstock = { $gt: 0 }
+
+    const pageNum = Math.max(1, parseInt(page))
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit)))
+    const skip = (pageNum - 1) * limitNum
+
+    const [products, total] = await Promise.all([
+      Product.find(filter)
+        .populate('category', 'name slug')
+        .sort(sort)
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Product.countDocuments(filter)
+    ])
+
+    return res.status(200).json({
+      success: true,
+      products,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+        totalProducts: total,
+        hasNextPage: pageNum < Math.ceil(total / limitNum),
+        hasPrevPage: pageNum > 1
+      }
+    })
+  } catch (error) {
+    console.error('Get All Products Error:', error)
+    return res.status(500).json({
+      success: false,
+      message: 'Error retrieving products',
+      error: error.message
+    })
+  }
 }
 const updateProduct = async (req, res) => {
   try {
@@ -292,28 +384,37 @@ const deleteProduct = async (req, res) => {
   })
 }
 const searchProduct = async (req, res) => {
-  const { name, category, brand } = req.query
   try {
+    const { name, category, brand, minPrice, maxPrice } = req.query
     const productCriteria = {}
-    if (name) {
-      productCriteria.name = { $regex: name, $option: 'i' }
+
+    if (name) productCriteria.name = { $regex: name, $options: 'i' }
+    if (category) productCriteria.category = category
+    if (brand) productCriteria.brand = { $regex: brand, $options: 'i' }
+    if (minPrice || maxPrice) {
+      productCriteria.price = {}
+      if (minPrice) productCriteria.price.$gte = Number(minPrice)
+      if (maxPrice) productCriteria.price.$lte = Number(maxPrice)
     }
-    if (category) {
-      productCriteria.category = { $regex: category, $option: 'i' }
-    }
-    if (brand) {
-      productCriteria.brand = { $regex: brand, $option: 'i' }
-    }
+
     const products = await Product.find(productCriteria)
+      .populate('category', 'name slug')
+      .lean()
+
     return res.status(200).json({
-      success: products ? true : false,
-      name, category, brand,
+      success: true,
+      total: products.length,
+      query: { name, category, brand, minPrice, maxPrice },
       products
     })
   } catch (error) {
-    return res.status(404).json({ message: 'Not found any product', error })
+    console.error('Search Products Error:', error)
+    return res.status(500).json({
+      success: false,
+      message: 'Error searching products',
+      error: error.message
+    })
   }
-
 }
 const uploadProductImage = async (req, res) => {
   try {
@@ -332,6 +433,195 @@ const uploadProductImage = async (req, res) => {
     return res.status(500).json({ success: false, message: "Upload failed" });
   }
 }
+const getRelatedProducts = async (req, res) => {
+  try {
+    const { id } = req.params
+    const limit = parseInt(req.query.limit) || 8
+    const currentProduct = await Product.findById(id).lean()
+
+    if (!currentProduct) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      })
+    }
+
+    const relatedProducts = await Product.find({
+      _id: { $ne: id },
+      $or: [
+        { category: { $in: currentProduct.category }, brand: currentProduct.brand },
+        { category: { $in: currentProduct.category } },
+        { brand: currentProduct.brand }
+      ],
+      countInstock: { $gt: 0 }
+    })
+      .populate('category', 'name slug')
+      .limit(limit)
+      .sort({ sold: -1, 'ratings.average': -1, createdAt: -1 })
+      .select('name brand category description price image countInstock sold ratings featured')
+      .lean()
+
+    if (relatedProducts.length < limit) {
+      const additionalProducts = await Product.find({
+        _id: { $ne: id, $nin: relatedProducts.map(p => p._id) },
+        countInstock: { $gt: 0 }
+      })
+        .populate('category', 'name slug')
+        .limit(limit - relatedProducts.length)
+        .sort({ sold: -1, 'ratings.average': -1 })
+        .select('name brand category description price image countInstock sold ratings featured')
+        .lean()
+
+      relatedProducts.push(...additionalProducts)
+    }
+
+    return res.status(200).json({
+      success: true,
+      total: relatedProducts.length,
+      currentProduct: {
+        id: currentProduct._id,
+        name: currentProduct.name,
+        category: currentProduct.category,
+        brand: currentProduct.brand
+      },
+      products: relatedProducts
+    })
+  } catch (error) {
+    console.error('Get Related Products Error:', error)
+    return res.status(500).json({
+      success: false,
+      message: 'Error getting related products',
+      error: error.message
+    })
+  }
+}
+const getProductWithReviews = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get product
+    const product = await Product.findById(id)
+      .populate('category', 'name slug')
+      .lean();
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Get review statistics
+    const reviewStats = await Review.getProductStats(id);
+
+    // Get featured reviews
+    const featuredReviews = await Review.getFeaturedReviews(id, 3);
+
+    // Count questions and feedbacks
+    const questionCount = await Review.countDocuments({
+      product: id,
+      reviewType: 'question',
+      status: 'published'
+    });
+
+    const feedbackCount = await Review.countDocuments({
+      product: id,
+      reviewType: 'feedback',
+      status: 'published'
+    });
+
+    return res.status(200).json({
+      success: true,
+      productData: {
+        ...product,
+        reviewSummary: {
+          ...reviewStats,
+          questionCount,
+          feedbackCount,
+          featuredReviews
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get Product With Reviews Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error getting product',
+      error: error.message
+    });
+  }
+};
+
+const getProductsWithReviewData = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 12,
+      category,
+      brand,
+      minPrice,
+      maxPrice,
+      minRating,
+      sort = '-createdAt'
+    } = req.query;
+
+    // Build filter
+    const filter = {};
+    if (category) filter.category = category;
+    if (brand) filter.brand = new RegExp(brand, 'i');
+    if (minPrice || maxPrice) {
+      filter.price = {};
+      if (minPrice) filter.price.$gte = Number(minPrice);
+      if (maxPrice) filter.price.$lte = Number(maxPrice);
+    }
+    if (minRating) {
+      filter['ratings.average'] = { $gte: Number(minRating) };
+    }
+
+    // Get products
+    const products = await Product.find(filter)
+      .populate('category', 'name slug')
+      .sort(sort)
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .lean();
+
+    const total = await Product.countDocuments(filter);
+
+    // Add review count for each product
+    const productsWithReviews = await Promise.all(
+      products.map(async (product) => {
+        const reviewCount = await Review.countDocuments({
+          product: product._id,
+          reviewType: 'rating',
+          status: 'published'
+        });
+
+        return {
+          ...product,
+          reviewCount
+        };
+      })
+    );
+
+    return res.status(200).json({
+      success: true,
+      products: productsWithReviews,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: Math.ceil(total / limit),
+        total
+      }
+    });
+  } catch (error) {
+    console.error('Get Products With Review Data Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 module.exports = {
   createProduct,
   getProduct,
@@ -341,5 +631,8 @@ module.exports = {
   updateProduct,
   deleteProduct,
   searchProduct,
-  uploadProductImage
+  uploadProductImage,
+  getRelatedProducts,
+  getProductWithReviews,
+  getProductsWithReviewData
 }

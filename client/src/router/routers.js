@@ -24,11 +24,17 @@ import productDetail from '../views/ProductDetail.vue'
 //  Sale Program
 import SaleProgram from '../components/SaleProgram.vue'
 import SaleProgramProducts from '../views/product-page/SaleProgramProducts.vue'
+import Wishlist from '../views/product-page/WishListProducts.vue'
 const routes = [
     {
-        path: '/HomeView',
-        name: 'HomeView',
-        component: HomeView
+        path: "/", 
+        name: "Home",
+        component: HomeView,
+        meta: {
+            title: "SHINY BEAUTY - Premium Cosmetics & Beauty Products",
+            description: "Shop the best beauty products, makeup, skincare, haircare and more at SHINY BEAUTY",
+            breadcrumb: "Home",
+        },
     },
     {
         path: '/Login-Page',
@@ -107,6 +113,11 @@ const routes = [
             }
 
         ]
+    },
+    {
+        path: '/wishlist',
+        name: 'Wishlist',
+        component: Wishlist,
     },
     {
         path: '/Setting',

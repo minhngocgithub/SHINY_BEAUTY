@@ -4,16 +4,9 @@
   >
     <div
       v-if="isLoading"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm"
+      class="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
     >
-      <div class="p-8 bg-white shadow-2xl rounded-2xl">
-        <div class="flex items-center space-x-3">
-          <div
-            class="w-8 h-8 border-b-2 border-pink-500 rounded-full animate-spin"
-          ></div>
-          <span class="font-medium text-gray-700">Đang đăng nhập...</span>
-        </div>
-      </div>
+      <Loading />
     </div>
     <div class="w-full max-w-md">
       <div class="mb-8 text-center">
@@ -260,7 +253,7 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { useRouter } from "vue-router";
 import { ref, onMounted } from "vue";
 import { jwtDecode } from "jwt-decode";
@@ -268,7 +261,8 @@ import { Form, Field, ErrorMessage } from "vee-validate";
 import * as yup from "yup";
 import { loginApi, getOAuthUrls } from "../../service/auth.service";
 import { initAuthStore } from "../../store/index.store";
-
+import Loading from "../../components/Loading.vue";
+import { useAuthStore } from "../../store/auth.store";
 const schema = yup.object({
   email: yup
     .string()
@@ -281,103 +275,75 @@ const schema = yup.object({
     .min(5, "Mật khẩu tối thiểu 5 ký tự!")
     .max(12, "Mật khẩu tối đa 12 ký tự!"),
 });
+const router = useRouter();
+const email = ref("");
+const password = ref("");
+const showPassword = ref(false);
+const isLoading = ref(false);
+const message = ref("");
+const oauthUrls = ref({});
+const authStore = useAuthStore();
+const loginUser = async (user) => {
+  message.value = "";
+  isLoading.value = true;
 
-export default {
-  name: "LoginForm",
-  components: {
-    Form,
-    Field,
-    ErrorMessage,
-  },
-  setup() {
-    const router = useRouter();
-    const email = ref("");
-    const password = ref("");
-    const showPassword = ref(false);
-    const isLoading = ref(false);
-    const message = ref("");
-    const oauthUrls = ref({});
-    const loginUser = async (user) => {
-      message.value = "";
-      isLoading.value = true;
+  try {
+    await loginApi(user).then((res) => {
+      const data = res["data"];
+      localStorage.setItem("accessToken", data.accessToken);
+      localStorage.setItem("refreshToken", data.newRefreshToken);
+      const user = jwtDecode(data.accessToken);
 
-      try {
-        await loginApi(user).then((res) => {
-          const data = res["data"];
-          localStorage.setItem("accessToken", data.accessToken);
-          localStorage.setItem("refreshToken", data.newRefreshToken);
-          const user = jwtDecode(data.accessToken);
-
-          if (user && user.isAdmin) {
-            router.push({ path: "/admin" });
-          } else if (user && !user.isAdmin) {
-            router.push({ path: "/HomeView" });
-          }
-        });
-
-        await initAuthStore();
-        window.location.reload();
-      } catch (error) {
-        message.value =
-          (error.response &&
-            error.response.data &&
-            error.response.data.message) ||
-          error.message ||
-          error.toString();
-      } finally {
-        isLoading.value = false;
-      }
-    };
-
-    onMounted(async () => {
-      try {
-        const response = await getOAuthUrls();
-        oauthUrls.value = response.data.oauthUrls;
-      } catch (error) {
-        console.error("Failed to get OAuth URLs:", error);
+      if (user && user.isAdmin) {
+        router.push({ path: "/admin" });
+      } else if (user && !user.isAdmin) {
+        router.push({ path: "/" });
       }
     });
 
-    const loginWithGoogle = () => {
-      if (oauthUrls.value.google) {
-        window.location.href = oauthUrls.value.google;
-        
-      } else {
-        console.error("Google OAuth URL not available");
-      }
-    };
+    await initAuthStore();
+    window.location.reload();
+  } catch (error) {
+    message.value =
+      (error.response && error.response.data && error.response.data.message) ||
+      error.message ||
+      error.toString();
+  } finally {
+    isLoading.value = false;
+  }
+};
 
-    const loginWithFacebook = () => {
-      if (oauthUrls.value.facebook) {
-        window.location.href = oauthUrls.value.facebook;
-      } else {
-        console.error("Facebook OAuth URL not available");
-      }
-    };
+onMounted(async () => {
+  try {
+    const response = await getOAuthUrls();
+    oauthUrls.value = response.data.oauthUrls;
+  } catch (error) {
+    console.error("Failed to get OAuth URLs:", error);
+  }
+});
 
-    const loginWithTwitter = () => {
-      if (oauthUrls.value.twitter) {
-        window.location.href = oauthUrls.value.twitter;
-      } else {
-        console.error("Twitter OAuth URL not available");
-      }
-    };
+const loginWithGoogle = () => {
+  if (oauthUrls.value.google) {
+    window.location.href = oauthUrls.value.google;
+  } else {
+    console.error("Google OAuth URL not available");
+  }
+};
 
-    return {
-      router,
-      email,
-      password,
-      showPassword,
-      message,
-      isLoading,
-      schema,
-      oauthUrls,
-      loginUser,
-      loginWithGoogle,
-      loginWithFacebook,
-      loginWithTwitter,
-    };
-  },
+const loginWithFacebook = () => {
+  if (oauthUrls.value.facebook) {
+    window.location.href = oauthUrls.value.facebook;
+  } else {
+    console.error("Facebook OAuth URL not available");
+  }
+};
+
+const loginWithTwitter = () => {
+  if (oauthUrls.value.twitter) {
+    window.location.href = oauthUrls.value.twitter;
+  } else {
+    console.error("Twitter OAuth URL not available");
+  }
 };
 </script>
 
@@ -407,6 +373,4 @@ export default {
 input:focus {
   outline: none;
 }
-
-
 </style>

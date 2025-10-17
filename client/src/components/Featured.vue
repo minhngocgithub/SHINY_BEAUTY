@@ -1,6 +1,6 @@
 <template>
   <section 
-    class="relative w-full px-4 py-16 overflow-hidden md:px-8 lg:px-16"
+    class="relative w-full px-4 py-8 overflow-hidden md:px-8 lg:px-16"
     data-aos="fade-up"
     data-aos-duration="1000"
     data-aos-once="true"
@@ -346,12 +346,9 @@ const currentProductImage = computed(() => {
   if (Array.isArray(product.image) && product.image.length > 0) {
     return product.image[0].url;
   }
-
-  // Handle single image object
   if (product.image && product.image.url) {
     return product.image.url;
   }
-
   return "/api/placeholder/200/150";
 });
 

@@ -213,10 +213,47 @@ const getAllSalePrograms = async (req, res) => {
 
 const getActiveSalePrograms = async (req, res) => {
     try {
-        const { type, category, brand, applyStacking } = req.query;
+        const { 
+            type, 
+            category, 
+            brand, 
+            applyStacking,
+            saleProgramId,  // ✅ THÊM: Lấy specific sale program ID
+            productId       // ✅ THÊM: Lấy product ID để filter
+        } = req.query;
+        
         const user = req.user || null;
 
         let salePrograms = await SaleProgramUtils.getActiveSalePrograms({ user });
+
+        // ✅ THÊM: Ưu tiên return sale program cụ thể nếu có saleProgramId
+        if (saleProgramId) {
+            const specificProgram = salePrograms.find(
+                p => p._id.toString() === saleProgramId || p.slug === saleProgramId
+            );
+            
+            if (specificProgram) {
+                console.log('✅ Found specific sale program:', specificProgram.title);
+                // Return program này ở đầu array
+                salePrograms = [
+                    specificProgram,
+                    ...salePrograms.filter(p => p._id.toString() !== saleProgramId)
+                ];
+            } else {
+                console.warn('⚠️ Requested sale program not found or inactive:', saleProgramId);
+            }
+        }
+
+        // ✅ THÊM: Filter theo productId nếu có
+        if (productId) {
+            const product = await require('../models/product.models').findById(productId);
+            if (product) {
+                salePrograms = salePrograms.filter(program => 
+                    SaleProgramUtils.isProductEligible(program, product)
+                );
+                console.log(`✅ Filtered ${salePrograms.length} programs applicable to product ${productId}`);
+            }
+        }
 
         if (type) {
             salePrograms = salePrograms.filter(program => program.type === type);
@@ -233,6 +270,7 @@ const getActiveSalePrograms = async (req, res) => {
                 program.conditions.brands?.includes(brand)
             );
         }
+        
         const filteredPrograms = applyStacking === 'true'
             ? SaleProgramUtils.filterByStackingRules(salePrograms)
             : salePrograms;

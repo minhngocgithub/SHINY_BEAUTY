@@ -34,7 +34,6 @@ export const showSuccessAlert = (
 ) => {
   Swal.fire({
     ...defaultConfig,
-    icon: 'success',
     title,
     html: `
       <div class="flex flex-col items-center">
@@ -48,6 +47,7 @@ export const showSuccessAlert = (
     `,
     confirmButtonText: 'Tuyệt vời!',
     confirmButtonColor: '#f43f5e',
+    target: document.body,
     timer,
     timerProgressBar: true,
   })
@@ -65,6 +65,7 @@ export const showErrorAlert = (
     text: message,
     confirmButtonColor: '#ef4444',
     confirmButtonText: 'Thử lại',
+    target: document.body,
     customClass: {
       ...defaultConfig.customClass,
       title: 'text-xl font-semibold text-red-600',
@@ -85,6 +86,7 @@ export const showWarningAlert = (
     text: message,
     confirmButtonColor: '#f59e0b',
     confirmButtonText: 'Đã hiểu',
+    target: document.body,
     customClass: {
       ...defaultConfig.customClass,
       title: 'text-xl font-semibold text-amber-600',

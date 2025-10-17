@@ -1,7 +1,7 @@
 <template>
   <section class="mb-2">
     <nav class="bg-white">
-      <div class="px-2 mx-auto max-w-7xl sm:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
         <div class="relative flex items-center justify-between h-16">
           <div
             class="flex items-center justify-center pr-16 sm:items-stretch sm:justify-start"
@@ -23,31 +23,45 @@
 
           <!-- Notifications -->
           <div
-            class="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0"
+            class="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0 group"
           >
-            <button
-              type="button"
-              class="relative p-1 text-gray-400 bg-gray-800 rounded-full hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800"
+            <!-- Wishlist Button with Badge -->
+            <router-link
+              to="/wishlist"
+              class="relative p-1 text-gray-400 bg-gray-800 rounded-full hover:text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800 group/wishlist"
             >
-              <span class="absolute -inset-1.5"></span>
-              <span class="sr-only">View notifications</span>
               <svg
-                class="w-6 h-6"
+                xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke-width="1.5"
                 stroke="currentColor"
-                aria-hidden="true"
+                class="size-6"
               >
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"
+                  d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"
                 />
               </svg>
-            </button>
 
-            <!-- Profile dropdown -->
+              <!-- Wishlist Count Badge -->
+              <span
+                v-if="wishlistStore.wishlistCount > 0"
+                class="absolute top-0 right-0 flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-600 rounded-full"
+              >
+                {{ wishlistStore.wishlistCount }}
+              </span>
+
+              <!-- Tooltip -->
+              <span
+                class="absolute px-2 py-1 text-xs text-white transition-all duration-300 -translate-y-1/2 bg-gray-800 rounded opacity-0 right-12 top-1/2 group-hover/wishlist:opacity-100 whitespace-nowrap"
+              >
+                Wishlist ({{ wishlistStore.wishlistCount }})
+              </span>
+            </router-link>
+
+            <!-- Profile Dropdown (existing code) -->
             <div
               v-if="!authStore.isLoggedIn"
               class="relative ml-3 bg-[#5a4098] rounded-lg p-2"
@@ -55,14 +69,14 @@
               <router-link
                 to="/Login-Page"
                 class="px-2 font-bold tracking-tight underline-none hover:text-sky-50 text-slate-400"
-                >Sign in</router-link
               >
+                Sign in
+              </router-link>
             </div>
 
-            <div v-else class="relative ml-3 group">
+            <div v-else class="relative pl-4 group/profile">
               <div class="px-4">
                 <div
-                  type="button"
                   class="relative flex mt-1 text-sm bg-white rounded-full focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800"
                   id="user-menu-button"
                   aria-expanded="false"
@@ -72,53 +86,55 @@
                   <Avatar
                     class="pr-3"
                     :current-avatar="
-                      authStore.user.avatar?.url || './assets/image/vue.svg'
+                      authStore.user?.avatar?.url || './assets/image/vue.svg'
                     "
                     :size="32"
                   />
-                  <router-link to="/Profile" class="pl-1 mt-1 font-inter">{{
-                    authStore.user.name || ""
-                  }}</router-link>
+                  <router-link to="/Profile" class="pl-1 mt-1 font-inter">
+                    {{ authStore.user?.name || "" }}
+                  </router-link>
                 </div>
               </div>
 
               <div
-                class="absolute right-0 hidden w-48 py-1 mt-2 origin-top-right bg-white rounded-md shadow-lg z-9999 group-hover:block ring-1 ring-black ring-opacity-5 focus:outline-none"
+                class="absolute right-0 hidden w-48 py-1 mt-2 origin-top-right bg-white rounded-md shadow-lg z-9999 group-hover/profile:block ring-1 ring-black ring-opacity-5 focus:outline-none"
                 role="menu"
                 aria-orientation="vertical"
                 aria-labelledby="user-menu-button"
                 tabindex="-1"
               >
-                <!-- Active: "bg-gray-100", Not Active: "" -->
                 <router-link to="/Profile">
                   <a
                     href="#"
-                    class="block px-4 py-2 text-sm text-gray-700"
+                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     role="menuitem"
                     tabindex="-1"
                     id="user-menu-item-0"
-                    >Your Profile</a
                   >
+                    Your Profile
+                  </a>
                 </router-link>
                 <router-link to="/setting">
                   <a
                     href="#"
-                    class="block px-4 py-2 text-sm text-gray-700"
+                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     role="menuitem"
                     tabindex="-1"
                     id="user-menu-item-1"
-                    >Settings
+                  >
+                    Settings
                   </a>
                 </router-link>
                 <a
                   @click.prevent="logoutAccount"
                   href="#"
-                  class="block px-4 py-2 text-sm text-gray-700"
+                  class="block px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-100"
                   role="menuitem"
                   tabindex="-1"
                   id="user-menu-item-2"
-                  >Log out</a
                 >
+                  Log out
+                </a>
               </div>
             </div>
           </div>
@@ -1722,122 +1738,114 @@
   </section>
 </template>
 
-<script>
-import { reactive, ref } from "vue";
+<script setup>
+import { reactive, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../store/auth.store";
+import { useWishlistStore } from "../store/wishlist.store";
 import { jwtDecode } from "jwt-decode";
 import { loginApi, logoutAccountApi } from "../service/auth.service";
 import SearchWrapper from "../components/search/SearchWrapper.vue";
 import Avatar from "../components/atoms/Avatar.vue";
-export default {
-  name: "Header",
-  components: {
-    SearchWrapper,
-    Avatar,
+import { 
+  showErrorAlert, 
+  showSuccessAlert,
+  closeAlert, 
+  showWarningAlert,
+  showConfirmAlert
+} from '../../utils/sweetAlert'
+const router = useRouter();
+const authStore = useAuthStore().state;
+const wishlistStore = useWishlistStore()
+const name = ref("");
+const items = reactive([
+  {
+    router: "/Login-Page",
   },
-  setup() {
-    const router = useRouter();
-    const authStore = useAuthStore().state;
-    const name = ref("");
-    const items = reactive([
-      {
-        router: "/Login-Page",
-      },
-    ]);
-    const navigations = reactive([
-      { name: "New", href: "#", current: false, router: "/Shop/new" },
-      { name: "Brands", href: "#", current: false, router: "/Shop/brands" },
-      { name: "Makeup", href: "#", current: false, router: "/Shop/makeup" },
-      { name: "Skincare", href: "#", current: false, router: "/Shop/skincare" },
-      { name: "Hair", href: "#", current: false, router: "/Shop/hair" },
-      {
-        name: "Fragrance",
-        href: "#",
-        current: false,
-        router: "/Shop/fragrance",
-      },
-      {
-        name: "Tools & Brushes",
-        href: "#",
-        current: false,
-        router: "/Shop/tools&brushes",
-      },
-      {
-        name: "Bath & Body",
-        href: "#",
-        current: false,
-        router: "/Shop/bath&body",
-      },
-      { name: "MiniSize", href: "#", current: false, router: "/Shop/miniSize" },
-      {
-        name: "Gifts & giftCards",
-        href: "#",
-        current: false,
-        router: "/Shop/gifts&giftCards",
-      },
-      {
-        name: "Beauty Under 20$",
-        href: "#",
-        current: false,
-        router: "/Shop/beautyUnder20$",
-      },
-      {
-        name: "Sale & Offers",
-        href: "#",
-        current: false,
-        router: "/Shop/sale&offers",
-      },
-    ]);
-    const currentDropdown = ref(null);
-    const showDropdown = (name) => {
-      currentDropdown.value = name;
-    };
-    const logoutAccount = async () => {
-      try {
-        await logoutAccountApi().then(() => {
-          authStore.isLoggedIn = false;
-          authStore.user = null;
-          localStorage.removeItem("accessToken");
-          localStorage.removeItem("refreshToken");
-          localStorage.removeItem("authState");
-          localStorage.removeItem("userInfo");
-          router.push({ path: "/Login-Page" });
-        });
-      } catch (error) {
-        router.push({ path: "/NotFound404" });
-      }
-    };
-    const getName = async () => {
-      try {
-        await loginApi(user).then((res) => {
-          const data = res["data"];
-          const accessToken = localStorage.getItem(
-            "accessToken",
-            data.accessToken
-          );
-          jwtDecode(accessToken);
-
-          name.value = data.userData.name;
-        });
-      } catch (error) {
-        return error;
-      }
-    };
-
-    return {
-      router,
-      items,
-      name,
-      navigations,
-      currentDropdown,
-      showDropdown,
-      authStore,
-      logoutAccount,
-      getName,
-    };
+]);
+const navigations = reactive([
+  { name: "New", href: "#", current: false, router: "/Shop/new" },
+  { name: "Brands", href: "#", current: false, router: "/Shop/brands" },
+  { name: "Makeup", href: "#", current: false, router: "/Shop/makeup" },
+  { name: "Skincare", href: "#", current: false, router: "/Shop/skincare" },
+  { name: "Hair", href: "#", current: false, router: "/Shop/hair" },
+  {
+    name: "Fragrance",
+    href: "#",
+    current: false,
+    router: "/Shop/fragrance",
   },
+  {
+    name: "Tools & Brushes",
+    href: "#",
+    current: false,
+    router: "/Shop/tools&brushes",
+  },
+  {
+    name: "Bath & Body",
+    href: "#",
+    current: false,
+    router: "/Shop/bath&body",
+  },
+  { name: "MiniSize", href: "#", current: false, router: "/Shop/miniSize" },
+  {
+    name: "Gifts & giftCards",
+    href: "#",
+    current: false,
+    router: "/Shop/gifts&giftCards",
+  },
+  {
+    name: "Beauty Under 20$",
+    href: "#",
+    current: false,
+    router: "/Shop/beautyUnder20$",
+  },
+  {
+    name: "Sale & Offers",
+    href: "#",
+    current: false,
+    router: "/Shop/sale&offers",
+  },
+]);
+const currentDropdown = ref(null);
+const showDropdown = (name) => {
+  currentDropdown.value = name;
 };
+const logoutAccount = async () => {
+  try {
+    const result = await showConfirmAlert("You wanna logout account ?")
+    if (result) {
+      await logoutAccountApi()
+      closeAlert()
+      showSuccessAlert("Logout successfully!")
+      authStore.isLoggedIn = false
+      authStore.user = null
+      localStorage.removeItem("accessToken")
+      localStorage.removeItem("refreshToken")
+      localStorage.removeItem("authState")
+      localStorage.removeItem("userInfo")
+      router.push({ path: "/Login-Page" })
+    }
+  } catch (error) {
+    router.push({ path: "/NotFound404" })
+  }
+}
+
+const getName = async () => {
+  try {
+    await loginApi(user).then((res) => {
+      const data = res["data"];
+      const accessToken = localStorage.getItem("accessToken", data.accessToken);
+      jwtDecode(accessToken);
+      name.value = data.userData.name;
+    });
+  } catch (error) {
+    return error;
+  }
+};
+onMounted(async () => {
+  await wishlistStore.fetchWishlist()
+})
 </script>
 
 <style lang="css" scoped>

@@ -174,7 +174,7 @@ const productSchema = new Schema({
             type: Number,
             default: 0
         },
-        postedBy: { type: mongoose.Types.ObjectId, ref: 'User' }
+        
     },
     totalRating: {
         type: Number,
@@ -279,6 +279,68 @@ productSchema.methods.getFeaturedPerformance = function() {
         trendingScore: this.calculateTrendingScore(),
         metrics: this.featuredMetrics
     };
+};
+productSchema.statics.updateRatingsFromReviews = async function(productId) {
+    try {
+        const Review = require('./review.models');
+        
+        const stats = await Review.aggregate([
+            { 
+                $match: { 
+                    product: mongoose.Types.ObjectId(productId),
+                    reviewType: 'rating',
+                    status: 'published'
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalRating: { $sum: '$rating' },
+                    count: { $sum: 1 },
+                    average: { $avg: '$rating' }
+                }
+            }
+        ]);
+
+        const product = await this.findById(productId);
+        if (!product) return null;
+
+        if (stats.length > 0) {
+            product.totalRating = stats[0].totalRating;
+            product.ratings.count = stats[0].count;
+            product.ratings.average = Number(stats[0].average.toFixed(2));
+        } else {
+            product.totalRating = 0;
+            product.ratings.count = 0;
+            product.ratings.average = 0;
+        }
+
+        await product.save();
+        return product;
+    } catch (error) {
+        console.error('Update ratings error:', error);
+        throw error;
+    }
+};
+
+productSchema.methods.getWithReviewSummary = async function() {
+    const Review = require('./review.models');
+    
+    const reviewStats = await Review.getProductStats(this._id);
+    
+    return {
+        ...this.toObject(),
+        reviewSummary: reviewStats
+    };
+};
+
+productSchema.methods.hasReviews = async function() {
+    const Review = require('./review.models');
+    const count = await Review.countDocuments({
+        product: this._id,
+        status: 'published'
+    });
+    return count > 0;
 };
 
 applyMiddleware(productSchema);

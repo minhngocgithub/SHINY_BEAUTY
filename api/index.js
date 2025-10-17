@@ -5,12 +5,10 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const session = require('express-session');
-const cron = require('node-cron');
 const {initializeCronJobs} = require('./jobs/index')
 dotenv.config();
 
 const passport = require('./config/passport');
-const Product = require('./models/product.models');
 
 const app = express();
 
@@ -28,6 +26,9 @@ const subCategoryRouter = require('../api/routers/subCategoryRouter');
 const oauthRouter = require('../api/routers/oauthRouter');
 const bundleProductRouter = require('../api/routers/bundleProductRouter');
 const saleProgramRouter = require('../api/routers/saleProgramRouter');
+const feedbackRouter = require('../api/routers/feedbackRouter')
+const reviewRouter = require('./routers/reviewRouter')
+const wishlistRouter = require('./routers/wishlistRouter')
 // Connect DB
 const connectDB = async () => {
     try {
@@ -80,6 +81,9 @@ app.use('/api/v1/subCategory', subCategoryRouter);
 app.use('/api/v1/auth/oauth', oauthRouter);
 app.use('/api/v1/sale-programs', saleProgramRouter);
 app.use('/api/v1/bundle', bundleProductRouter);
+app.use('/api/v1/feedback', feedbackRouter);
+app.use('/api/v1/review', reviewRouter);
+app.use('/api/v1/wishlist', wishlistRouter);
 app.get('/test', (req, res) => {
     res.json('test ok');
 })

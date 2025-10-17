@@ -40,7 +40,7 @@ export const createSaleProgramApi = async (data) => {
     const isFormData = data instanceof FormData;
     
     return await axiosApiInstance.post(
-        `${BASE_SALE_PROGRAM_API}/admin`,
+        `${BASE_SALE_PROGRAM_API}/admin/create`,
         data,
         isFormData ? {
             headers: { 'Content-Type': 'multipart/form-data' }
@@ -51,7 +51,7 @@ export const createSaleProgramApi = async (data) => {
 export const getAllSaleProgramsApi = async (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return await axiosApiInstance.get(
-        `${BASE_SALE_PROGRAM_API}/admin/${queryString ? `?${queryString}` : ''}`
+        `${BASE_SALE_PROGRAM_API}/admin/all${queryString ? `?${queryString}` : ''}`
     );
 };
 export const updateSaleProgramApi = async (id, data) => {

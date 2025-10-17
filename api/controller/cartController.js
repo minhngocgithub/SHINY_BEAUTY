@@ -2,6 +2,7 @@ const Product = require("../models/product.models")
 const User = require("../models/user.models")
 const ProductBundle = require("../models/productBundle.models")
 const SaleProgramUtils = require("../utils/saleProgram.utils")
+
 const addToCard = async (req, res) => {
     try {
         const { productId, bundleId, quantity = 1 } = req.body
@@ -134,11 +135,7 @@ const getCart = async (req, res) => {
                 message: 'User not found'
             });
         }
-
-        // Apply sale programs to cart items
         const cartWithPrograms = await SaleProgramUtils.applyProgramsToCart(user.cartItems, user);
-        
-        // Calculate cart totals
         let subtotal = 0;
         let totalItems = 0;
         let totalDiscount = 0;

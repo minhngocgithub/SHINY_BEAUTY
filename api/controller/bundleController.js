@@ -620,7 +620,32 @@ const uploadBundleImage = async (req, res) => {
         });
     }
 };
+const getBundlesByProduct = async (req, res) => {
+  try {
+    const { productId } = req.params;
 
+    const bundles = await ProductBundle.find({
+      'items.product': productId,
+      isActive: true
+    })
+    .populate('items.product', 'name price images brand countInstock currentPrice isSaleActive')
+    .populate('category', 'name')
+    .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: bundles.length,
+      bundles
+    });
+  } catch (error) {
+    console.error('Error getting bundles by product:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
+};
 module.exports = {
     createProductBundle,
     getProductBundles,
@@ -632,5 +657,6 @@ module.exports = {
     getBundlesByCategory,
     getAdminBundles,
     searchBundles,
+    getBundlesByProduct,
     uploadBundleImage
 }

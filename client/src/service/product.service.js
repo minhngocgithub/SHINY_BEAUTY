@@ -16,7 +16,7 @@ export const getProductApi = async(id, data) => {
     return await axiosApiInstance.get(`${BASE_PRODUCT_API}/${id}`, data)
 }
 export const searchProductApi = async(query) => {
-    return await axiosApiInstance.get(`${BASE_PRODUCT_API}?${query}`)
+    return await axiosApiInstance.get(`${BASE_PRODUCT_API}/search?${query}`)
 }
 export const getNewProductApi = async(data) => {
     return await axiosApiInstance.get(`${BASE_PRODUCT_API}/newProduct`, data)
@@ -24,8 +24,17 @@ export const getNewProductApi = async(data) => {
 export const getBestSellerApi = async(data) => {
     return await axiosApiInstance.get(`${BASE_PRODUCT_API}/bestSeller`, data)
 }
+export const getRelatedProductsApi = async(productId, params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return await axiosApiInstance.get(
+        `${BASE_PRODUCT_API}/${productId}/related${queryString ? `?${queryString}` : ''}`
+    );
+}
+export const getProductWithReviewsApi = async(id, params = {}) => {
+    return await axiosApiInstance.get(`${BASE_PRODUCT_API}/${id}/with-reviews`, { params })
+}
 export const uploadApi = async(file) => {
-    return await axiosApiInstance.post('/upload', file)
+    return await axiosApiInstance.post('/upload-image', file)
 }
 // Sales products
 export const getSaleProductsApi = async() => {

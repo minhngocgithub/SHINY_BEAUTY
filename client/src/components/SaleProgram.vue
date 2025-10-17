@@ -1,10 +1,7 @@
 <template>
   <section class="relative px-4 py-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-    <div
-      v-if="loading"
-      class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
-    >
-      <Loading />
+    <div v-if="loading" class="flex items-center justify-center"> 
+      <Loading /> 
     </div>
     <div v-else-if="error" class="py-12 text-center">
       <svg
@@ -213,29 +210,25 @@
   </section>
 </template>
 
-<script>
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
+<script setup>
+import { ref, computed, onMounted, onUnmounted } from "vue"
+import { useRouter } from "vue-router"
 import {
   getActiveSaleProgramsApi,
   formatSaleProgramForDisplay,
   calculateTimeRemaining,
-} from "../service/saleProgram.service";
-import Loading from "../components/Loading.vue";
-export default {
-  name: "SaleProgram",
-  setup() {
-    const router = useRouter();
-
-    const salePrograms = ref([]);
-    const loading = ref(true);
-    const error = ref(null);
-    const currentIndex = ref(0);
-    const windowWidth = ref(window.innerWidth);
+} from "../service/saleProgram.service"
+import Loading from '../components/Loading.vue'
+    const router = useRouter()
+    const salePrograms = ref([])
+    const loading = ref(true)
+    const error = ref(null)
+    const currentIndex = ref(0)
+    const windowWidth = ref(window.innerWidth)
     const visibleItems = computed(() => {
-      if (windowWidth.value < 768) return 1;
-      if (windowWidth.value < 1024) return 2; // tablet
-      return 3; // desktop
+      if (windowWidth.value < 768) return 1
+      if (windowWidth.value < 1024) return 2
+      return 3
     });
     const currentSlideIndex = computed(() => {
       return Math.floor(currentIndex.value / visibleItems.value);
@@ -307,21 +300,6 @@ export default {
       window.removeEventListener("resize", updateWindowWidth);
     });
 
-    return {
-      salePrograms,
-      loading,
-      error,
-      currentIndex,
-      visibleItems,
-      currentSlideIndex,
-      nextSlide,
-      prevSlide,
-      goToSlide,
-      goToSaleProducts,
-      fetchSalePrograms,
-    };
-  },
-};
 </script>
 
 <style scoped>

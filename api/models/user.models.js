@@ -28,7 +28,7 @@ const cartItemSchema = new mongoose.Schema({
 }, {
     timestamps: true
 })
-cartItemSchema.pre('save', function(next) {
+cartItemSchema.pre('save', function (next) {
     if ((this.product && this.bundle) || (!this.product && !this.bundle)) {
         const err = new Error('Cart item must have either product or bundle, but not both');
         return next(err);
@@ -38,7 +38,7 @@ cartItemSchema.pre('save', function(next) {
     } else if (this.bundle) {
         this.itemType = 'bundle';
     }
-    
+
     next();
 });
 const userSchema = mongoose.Schema({
@@ -53,7 +53,7 @@ const userSchema = mongoose.Schema({
     },
     password: {
         type: String,
-        required: function() {
+        required: function () {
             return !this.isOAuthUser; // Password không bắt buộc cho OAuth users
         }
     },
@@ -61,7 +61,7 @@ const userSchema = mongoose.Schema({
         type: String,
         required: false,
         validate: {
-            validator: function(v) {
+            validator: function (v) {
                 return !v || /^[0-9]{9,10}$/.test(v); // Validate phone format nếu có
             },
             message: 'Phone number must be 9-10 digits'
@@ -71,22 +71,22 @@ const userSchema = mongoose.Schema({
         type: Date,
         required: false,
         validate: {
-            validator: function(v) {
+            validator: function (v) {
                 if (!v) return true;
                 const today = new Date();
-                const birthDate = new Date(v);                
+                const birthDate = new Date(v);
                 if (isNaN(birthDate.getTime())) {
                     return false;
-                }                
+                }
                 if (birthDate > today) {
                     return false;
                 }
                 let age = today.getFullYear() - birthDate.getFullYear();
                 const monthDiff = today.getMonth() - birthDate.getMonth();
-                
+
                 if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
                     age--;
-                }                
+                }
                 return age >= 10 && age <= 100;
             },
             message: 'Date of birth must be valid and result in age between 10-100'
@@ -99,18 +99,40 @@ const userSchema = mongoose.Schema({
     avatar: {
         public_id: {
             type: String,
-            required: function() {
+            required: function () {
                 return !this.isOAuthUser;
             }
         },
         url: {
             type: String,
-            required: function() {
+            required: function () {
                 return !this.isOAuthUser;
             }
         }
     },
     cartItems: [cartItemSchema],
+    wishlistItems: [{
+        product: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Product',
+            required: true
+        },
+        addedAt: {
+            type: Date,
+            default: Date.now
+        },
+        priceWhenAdded: {
+            type: Number
+        },
+        notifyOnSale: {
+            type: Boolean,
+            default: false
+        },
+        notifyOnRestock: {
+            type: Boolean,
+            default: false
+        }
+    }],
     loyaltyProfile: {
         tier: {
             type: String,
@@ -149,10 +171,10 @@ const userSchema = mongoose.Schema({
             default: 0
         }
     },
-    isAdmin: { 
-        type: Boolean, 
-        required: true, 
-        default: false 
+    isAdmin: {
+        type: Boolean,
+        required: true,
+        default: false
     },
     createAt: {
         type: Date,
@@ -167,7 +189,7 @@ const userSchema = mongoose.Schema({
     },
     resetPasswordToken: String,
     resetPasswordExpire: Date
-}, { timestamps: true} )
+}, { timestamps: true })
 
 userSchema.index({ email: 1 }, { unique: true })
 userSchema.index({ 'loyaltyProfile.tier': -1 })
@@ -177,16 +199,16 @@ userSchema.index({ 'cartItems.product': 1 });
 userSchema.index({ 'cartItems.bundle': 1 });
 userSchema.index({ 'cartItems.addedAt': 1 });
 
-userSchema.virtual('isNewCustomer').get(function() {
+userSchema.virtual('isNewCustomer').get(function () {
     return this.loyaltyProfile.totalOrders === 0;
 })
-userSchema.virtual('customerLifespanDays').get(function() {
-    if(!this.loyaltyProfile.joinDate) return 0;
+userSchema.virtual('customerLifespanDays').get(function () {
+    if (!this.loyaltyProfile.joinDate) return 0;
     const diffTime = Date.now() - this.createdAt.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 })
-userSchema.methods.updateLoyaltyProfile = function(orderData) {
-    if(!orderData || !orderData.totalPrice) {
+userSchema.methods.updateLoyaltyProfile = function (orderData) {
+    if (!orderData || !orderData.totalPrice) {
         console.log('Order data with totalPrice is required to update loyalty profile');
     }
     this.loyaltyProfile.totalSpent += orderData.totalPrice;
@@ -195,52 +217,52 @@ userSchema.methods.updateLoyaltyProfile = function(orderData) {
 
     this.loyaltyProfile.averageOrderValue = this.loyaltyProfile.totalSpent / this.loyaltyProfile.totalOrders;
     const newTier = this.caculateLoyaltyTier();
-    if(newTier !== this.loyaltyProfile.tier) {
+    if (newTier !== this.loyaltyProfile.tier) {
         this.loyaltyProfile.tier = newTier;
     }
     return this
 }
-userSchema.methods.calculateTier = function() {
+userSchema.methods.calculateTier = function () {
     const { totalSpent, totalOrders } = this.loyaltyProfile;
-    
+
     // Tier logic - carefully tested
     if (totalSpent >= 2000 && totalOrders >= 50) {
         return 'PLATINUM';
     }
-    
+
     if (totalSpent >= 1000 && totalOrders >= 20) {
         return 'VIP';
     }
-    
+
     if (totalOrders >= 3) {
         return 'REGULAR';
     }
-    
+
     return 'NEW_CUSTOMER';
 };
 
-userSchema.methods.addLoyaltyPoints = function(points) {
+userSchema.methods.addLoyaltyPoints = function (points) {
     if (typeof points !== 'number' || points < 0) {
         console.log('Points must be a positive number');
     }
-    
+
     this.loyaltyProfile.points += points;
     return this;
 };
-userSchema.methods.spendLoyaltyPoints = function(points) {
+userSchema.methods.spendLoyaltyPoints = function (points) {
     if (typeof points !== 'number' || points < 0) {
         console.log('Points must be a positive number');
     }
-    
+
     if (this.loyaltyProfile.points < points) {
         console.log('Insufficient points');
     }
-    
+
     this.loyaltyProfile.points -= points;
     return this;
 };
 
-userSchema.methods.getTierBenefits = function() {
+userSchema.methods.getTierBenefits = function () {
     const TIER_BENEFITS = {
         NEW_CUSTOMER: {
             name: 'New Customer',
@@ -278,18 +300,18 @@ userSchema.methods.getTierBenefits = function() {
             conciergeService: true
         }
     };
-    
+
     return TIER_BENEFITS[this.loyaltyProfile.tier] || TIER_BENEFITS.NEW_CUSTOMER;
 };
-userSchema.methods.getCartTotal = async function() {
+userSchema.methods.getCartTotal = async function () {
     await this.populate([
-        { 
-            path: 'cartItems.product', 
-            select: 'name price currentPrice isSaleActive discountPercentage' 
+        {
+            path: 'cartItems.product',
+            select: 'name price currentPrice isSaleActive discountPercentage'
         },
-        { 
-            path: 'cartItems.bundle', 
-            select: 'name bundlePrice discountPercentage' 
+        {
+            path: 'cartItems.bundle',
+            select: 'name bundlePrice discountPercentage'
         }
     ]);
 
@@ -298,13 +320,13 @@ userSchema.methods.getCartTotal = async function() {
 
     for (const item of this.cartItems) {
         let itemPrice = 0;
-        
+
         if (item.itemType === 'product' && item.product) {
             itemPrice = item.product.currentPrice || item.product.price;
         } else if (item.itemType === 'bundle' && item.bundle) {
             itemPrice = item.bundle.bundlePrice;
         }
-        
+
         total += itemPrice * item.quantity;
         itemCount += item.quantity;
     }
@@ -316,17 +338,17 @@ userSchema.methods.getCartTotal = async function() {
     };
 };
 
-userSchema.methods.clearExpiredCartItems = async function() {
+userSchema.methods.clearExpiredCartItems = async function () {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
+
     this.cartItems = this.cartItems.filter(item => item.addedAt > sevenDaysAgo);
     await this.save();
-    
+
     return this.cartItems.length;
 };
 
-userSchema.methods.findCartItem = function(productId, bundleId) {
+userSchema.methods.findCartItem = function (productId, bundleId) {
     return this.cartItems.find(item => {
         if (productId && item.product) {
             return item.product.toString() === productId.toString();
@@ -339,7 +361,7 @@ userSchema.methods.findCartItem = function(productId, bundleId) {
 };
 
 
-userSchema.pre('save', function(next) {
+userSchema.pre('save', function (next) {
     // Ensure loyalty profile exists
     if (!this.loyaltyProfile) {
         this.loyaltyProfile = {
@@ -350,7 +372,7 @@ userSchema.pre('save', function(next) {
             averageOrderValue: 0
         };
     }
-    
+
     next();
 });
 module.exports = mongoose.model('User', userSchema)

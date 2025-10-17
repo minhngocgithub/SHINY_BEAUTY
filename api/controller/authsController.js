@@ -10,12 +10,10 @@ const fs = require('fs')
 const register = async(req, res) => {
     const { name, email, password, otp } = req.body
     try {
-        // Kiểm tra tất cả các trường dữ liệu
         if(!name || !email || !password || !otp){
             return res.status(400).json('Please fill in fields')
         }
-        
-        // Kiểm tra OTP trước khi kiểm tra email tồn tại
+
         const otpRecord = await OTP.findOne({ email, otp });
         if (!otpRecord) {
             return res.status(400).json({ success: false, message: 'Mã OTP không chính xác hoặc đã hết hạn' });
@@ -66,7 +64,6 @@ const login = async(req, res) => {
         
         const user = await User.findOne({ email })
         if(user) {
-            // Kiểm tra nếu user là OAuth user (không có password)
             if (user.isOAuthUser) {
                 return res.status(422).json('This account was created using OAuth. Please use OAuth login instead.')
             }
